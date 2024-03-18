@@ -21,18 +21,12 @@ function ConstrainedProblem(χ, h, mₚ, S; kwags...)
         jac = kwags[:jac]
     end
 
-    if !haskey(kwags, :hes)
-        hes(x) = Zygote.hessian(S, x)
-    else
-        hes = kwags[:hes]
-    end
+    hes(x) = Zygote.hessian(S, x)
+
 
     obj(u) = S(u) - u ⋅ mₚ
     ∇obj(u) = jac(u) - mₚ
-    ∇²obj = hes
-    objᵩ(x) = obj(transform_to_euklidean_3D(x..., χ, h))
-    ∇objᵩ(x) = Zygote.gradient(objᵩ, x)[1]
-    ∇²objᵩ(x) = Zygote.hessian(objᵩ, x)
+    ∇²obj(x) = Hermitian(Zygote.hessian(S, x))
     ConstrainedProblem(χ, h, mₚ, obj, ∇obj, ∇²obj, S, jac, hes)
 end
 
@@ -70,8 +64,7 @@ function UnconstrainedProblem(χ, h, mₚ, U; kwags...)
 
     obj(m) = U(m) - h ⋅ m + χ*norm(m - mₚ)
     ∇obj(m) = jac(m) - h + χ/norm(m - mₚ) * (m - mₚ)
-    ∇²obj(m) = hes(m) + χ * (1/norm(m - mₚ) * I - 1/norm(m - mₚ)^3 * (m - mₚ) * (m - mₚ)')
-
+    ∇²obj(m) = hes(m) + χ * Zygote.hessian(x -> norm(x - mₚ),m) 
 
 
     UnconstrainedProblem(χ, h, mₚ, obj,∇obj,∇²obj, U, jac, hes)
