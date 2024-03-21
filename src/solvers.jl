@@ -1,4 +1,4 @@
-include("interface.jl")
+include("subgradientdescent.jl")
 using LinearSolve: LinearSolve
 
 function transform_to_euklidean_3D(w, r, m)
@@ -23,6 +23,10 @@ function solve(intf::Interface, algorithm; linesearch)
 		newton(intf, linesearch = linesearch)
 	elseif algorithm == :semi_smooth_newton
 		semi_smooth_newton(intf, linesearch = linesearch)
+	elseif algorithm == :subgradientdescent
+		subgradientdescent(intf, linesearch = linesearch)
+	else
+		throw(ArgumentError("Algorithm not implemented"))
 	end
 end
 
@@ -125,7 +129,7 @@ function newton!(cache::NewtonCache, linesearch, f, g, H, ϕ, dϕ, ϕdϕ, max_it
 		cache.Hfk = H(cache.xk)
 
 		cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
-        @info cache.iter cache.err
+		@info cache.iter cache.err
 		if cache.err <= tol
 			return :converged
 		end
@@ -134,36 +138,36 @@ function newton!(cache::NewtonCache, linesearch, f, g, H, ϕ, dϕ, ϕdϕ, max_it
 	return :diverged
 end
 
-function choleksyadaption!(A,β = 10e-3, max_iter = 1000)
+function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
 	A = Symetric(A)
-    if (isposdef(A))
-        return nothing
-    end
+	if (isposdef(A))
+		return nothing
+	end
 	@info "Adapting Cholesky Factorization to make Hessian positive definite."
-    if any(diag(A) .<= 0)
-     τ = 0
-    else
-        τ = minimum(diag(A)) - β
-    end
+	if any(diag(A) .<= 0)
+		τ = 0
+	else
+		τ = minimum(diag(A)) - β
+	end
 
-    for i in 1:max_iter
-        @info i τ, A
+	for i in 1:max_iter
+		@info i τ, A
 		A = A + τ * I
-        if isposdef(A)
-            return nothing
-        else
-            τ = max(2 * τ, β)
-        end
-    end
-    return nothing
+		if isposdef(A)
+			return nothing
+		else
+			τ = max(2 * τ, β)
+		end
+	end
+	return nothing
 end
 
 function newton_step!(cache::NewtonCache, f, g, H, guaranteedconvex = true)
 	cache.xold = copy(cache.xk)
 	cache.fold = copy(cache.fk)
-    if(!guaranteedconvex)
-       choleksyadaption!(cache.Hfk) 
-    end
+	if (!guaranteedconvex)
+		choleksyadaption!(cache.Hfk)
+	end
 	prob = LinearSolve.LinearProblem(cache.Hfk, -cache.dfk)
 	cache.s = LinearSolve.solve(prob).u
 end
@@ -177,11 +181,11 @@ end
 function proximal_gradient(intf::Interface{UnconstrainedProblem})
 	s = 0.1
 	η = 1.001
-	Lk = s
+	Lk = 0.1
 
 	f(xk) = intf.prob.U(xk) - xk ⋅ intf.prob.h
 	∂f(xk) = intf.prob.∂U(xk) - intf.prob.h
-	cache = Cache(intf.x0, f(intf.x0), ∂f(intf.x0), Inf)
+	cache = Cache(zeros(length(intf.x0)), intf.x0, f(intf.x0), ∂f(intf.x0), Inf)
 	T(∂f, Lk, xk, dfk) = proxOfNorm((xk .- 1 / Lk * dfk), 1 / Lk * intf.prob.χ, intf.prob.mₚ)
 
 	for i ∈ 1:intf.max_iter
@@ -194,17 +198,7 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem})
 		cache.fk = f(cache.xk)
 		cache.dfk = ∂f(cache.xk)
 
-		if cache.xk ≈ intf.prob.mₚ
-			if norm(cache.dfk) ≤ intf.prob.χ
-				cache.err = norm(cache.xk - intf.prob.mₚ)
-				return Solution(cache.xk, intf.prob.obj(xk), true, i, cache.err)
-			end
-		else
-			cache.err = norm(intf.prob.∇obj(cache.xk))
-			if (cache.err ≤ intf.tol)
-				return Solution(cache.xk, intf.prob.obj(cache.xk), true, i, cache.err)
-			end
-		end
+		checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk + intf.prob.χ * norm(cache.xk - intf.prob.mₚ), true, i, cache.err)
 	end
 
 	return Solution(cache.xk, intf.prob.obj(cache.xk), false, intf.max_iter, cache.err)
@@ -230,19 +224,18 @@ function semi_smooth_newton(intf::Interface; linesearch)
 
 	for i ∈ 1:intf.max_iter
 		cache.iter += 1
-		println(cache)
+
 		if cache.xk ≈ intf.prob.mₚ
 			if norm(intf.prob.∂U(cache.xk) + intf.prob.h) ≤ intf.prob.χ
 				return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
 			else
-				cache.xk = cache.xk + intf.prob.χ / 1000 * cache.xk
+				cache.xk = cache.xk + intf.prob.χ * (intf.prob.mₚ + rand(length(intf.x0)))
 				cache.dfk = intf.prob.∇obj(cache.xk)
 				cache.Hfk = intf.prob.∇²obj(cache.xk)
 			end
 		else
 
 			newton_step!(cache, intf.prob.obj, intf.prob.∇obj, intf.prob.∇²obj)
-			println("s = $(cache.s)")
 			dϕ₀ = dot(cache.s, cache.dfk)
 
 			α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
@@ -250,11 +243,9 @@ function semi_smooth_newton(intf::Interface; linesearch)
 			cache.xk += α * cache.s
 			cache.dfk = intf.prob.∇obj(cache.xk)
 			cache.Hfk = intf.prob.∇²obj(cache.xk)
-			cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
+			
+			checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, i, cache.err)
 
-			if cache.err <= intf.tol
-				return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
-			end
 		end
 
 	end
