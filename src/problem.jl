@@ -30,9 +30,7 @@ function ConstrainedProblem(χ, h, mₚ, S; kwags...)
     obj(u) = S(u) - u ⋅ mₚ
     ∇obj(u) = jac(u) - mₚ
     ∇²obj = hes
-    objᵩ(x) = obj(transform_to_euklidean_3D(x..., χ, h))
-    ∇objᵩ(x) = Zygote.gradient(objᵩ, x)[1]
-    ∇²objᵩ(x) = Zygote.hessian(objᵩ, x)
+
     ConstrainedProblem(χ, h, mₚ, obj, ∇obj, ∇²obj, S, jac, hes)
 end
 

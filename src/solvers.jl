@@ -61,16 +61,17 @@ function newton(intf::Interface; linesearch)
     else
         x0 = (intf.prob.χ / norm(cache.xk) * cache.xk) + intf.prob.h
         if length(cache.xk) == 2
-            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D)
+            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D,cache.iter)
         else
-            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_3D, transform_to_radial_3D)
+            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_3D, transform_to_radial_3D, cache.iter)
         end
     end
 
 end
 
-function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_transform)
+function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_transform, used_iter)
 
+    println("Started searching on boundary after $used_iter")
     f(x) = intf.prob.obj(transform(x, intf.prob.χ, intf.prob.h))
     g(x) = Zygote.gradient(u -> f(u), x)[1]
     H(x) = Zygote.hessian(u -> f(u), x)
@@ -84,7 +85,7 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
         g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
         H(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
         Inf,
-        0
+        used_iter
     )
     ϕ(α) = f(cache.xk + α * cache.s)
     dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
@@ -178,5 +179,13 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem})
 end
 
 function semi_smooth_newton(intf::Interface, linesearch)
-
+    cache = NewtonCache(
+        zeros(length(intf.x0)),
+        intf.x0,
+        intf.x0,
+        intf.prob.obj(intf.x0),
+        Inf,
+        intf.prob.∇obj(intf.x0),
+        
+    )
 end
