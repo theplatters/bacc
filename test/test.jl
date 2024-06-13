@@ -1,45 +1,46 @@
 using Revise
-using BenchmarkTools
+using BenchmarkTools, Plots, Profile, Zygote, LinearAlgebra, LineSearches
 using Bachelorarbeit
-using LinearAlgebra
-using Profile, ProfileView
-using LineSearches
-
-using Zygote
-
+plotlyjs()
 function ls(ϕ, dϕ, ϕdϕ, α, fk, dϕ₀)
-    i = 0
-    while ϕ(α) - fk ≤ 0.5 * α * dϕ₀
-        i += 1
-        if (i > 10.000)
-            throw(error("Maximum Iteration reached"))
-        end
-        α = α * 0.99
-    end
-    α, ϕ(α)
+	i = 0
+	while ϕ(α) - fk ≤ 0.5 * α * dϕ₀
+		i += 1
+		if (i > 10.000)
+			throw(error("Maximum Iteration reached"))
+		end
+		α = α * 0.99
+	end
+	α, ϕ(α)
 end
 
-χ = 900;
-h = mₚ = [1.0, 4.0];
-A = diagm([5.0, 0.02]);
-b = [-0.3, 0.3];
+χ = 1e2;
+mₚ = [1.0, -30.0, 3.03];
+A = diagm([5.0, 2.0, 10]);
+b = h = [10.0, 52.0, 3.0];
+a = 10
+m = 1e10
 
-#S(u) = u' * A * u + b' * u
-#S(u) = norm(u) * atan(norm(u)) + log(1 + norm(u)^2)
+S(u) = u' * A * u + b' * u
+#S(u) = 2 / π * m * norm(u) * atan(norm(u) / a) + 1 / 2 * log(a^2 + norm(u)^2)
 #S(u) = log(exp(u[1])+ exp(u[2]) + 1)
 
-prob = ConstrainedProblem(χ, h, mₚ, S)
-intf = Interface(prob, h, 100000, 10e-6)
-sol1 = solve(intf, :newton, linesearch=BackTracking())
-sol2 = solve(intf, :newton, linesearch=HagerZhang())
-sol3 = solve(intf, :newton, linesearch=StrongWolfe())
-sol4 = solve(intf, :newton, linesearch=ls)
-sol5 = solve(intf, :newton, linesearch=Static())
+prob = UnconstrainedProblem(χ, h, mₚ, S)
+intf = Interface(prob, ones(3), 1000, 10e-8)
 
-sol5.sol - h |> norm
+sol1 = solve(intf, :subgradientdescent, linesearch = StrongWolfe())
+#sol2 = solve(intf, :newton, linesearch=HagerZhang())
+sol3 = solve(intf, :proximal_gradient, linesearch = StrongWolfe())
+#sol4 = solve(intf, :newton, linesearch=ls)
+@benchmark (
+	intf = Interface(prob, ones(3) + rand(3), 1000, 10e-8),
+	sol5 = solve(intf, :semi_smooth_newton, linesearch = StrongWolfe()),
+)
 
-sol3.f
-using Plots
-plot(range(-π, π, 100), x -> intf.prob.obj(transform_to_euklidean_2D([x], χ, h)))
 
-surface(range(-1, 10, 100), range(-1, 10, 100), (x, y) -> intf.prob.obj([x, y]))
+sol3.sol - h |> norm
+
+@profview [solve(intf, :subgradientdescent, linesearch = StrongWolfe()) for i in 1:100]
+
+surface(LinRange(-π, π, 100), LinRange(-π, π, 100), (x, y) -> intf.prob.obj(transform_to_euklidean_3D([x, y], χ, h)))
+
