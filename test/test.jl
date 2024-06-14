@@ -26,9 +26,10 @@ S(u) = u' * A * u + b' * u
 #S(u) = log(exp(u[1])+ exp(u[2]) + 1)
 
 prob = UnconstrainedProblem(χ, h, mₚ, S)
-intf = Interface(prob, ones(3), 1000, 10e-8)
+intf = Interface(prob, ones(3) +rand(3), 2000, 10e-8)
 
 sol1 = solve(intf, :subgradientdescent, linesearch = StrongWolfe())
+
 #sol2 = solve(intf, :newton, linesearch=HagerZhang())
 sol3 = solve(intf, :proximal_gradient, linesearch = StrongWolfe())
 #sol4 = solve(intf, :newton, linesearch=ls)

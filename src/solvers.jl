@@ -226,7 +226,7 @@ function semi_smooth_newton(intf::Interface; linesearch)
 		cache.iter += 1
 
 		if cache.xk ≈ intf.prob.mₚ
-			if norm(intf.prob.∂U(cache.xk) + intf.prob.h) ≤ intf.prob.χ
+			if norm(intf.prob.∂U(cache.xk) - intf.prob.h) ≤ intf.prob.χ
 				return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
 			else
 				cache.xk = cache.xk + intf.prob.χ * (intf.prob.mₚ + rand(length(intf.x0)))
