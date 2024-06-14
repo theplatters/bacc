@@ -61,41 +61,42 @@ function newton(intf::Interface; linesearch)
 		intf.tol,
 		interior_violated = x -> norm(x - intf.prob.h) > intf.prob.χ)
 
-	if state == :converged
-		return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
-	elseif state == :diverged
-		return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
-	else
-		x0 = (intf.prob.χ / norm(cache.xk) * cache.xk) + intf.prob.h
-		if length(cache.xk) == 2
-			return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D)
-		else
-			return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_3D, transform_to_radial_3D)
-		end
-	end
+    if state == :converged
+        return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
+    elseif state == :diverged
+        return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
+    else
+        x0 = (intf.prob.χ / norm(cache.xk) * cache.xk) + intf.prob.h
+        if length(cache.xk) == 2
+            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D,cache.iter)
+        else
+            return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_3D, transform_to_radial_3D, cache.iter)
+        end
+    end
 
 end
 
-function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_transform)
+function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_transform, used_iter)
 
-	f(x) = intf.prob.obj(transform(x, intf.prob.χ, intf.prob.h))
-	g(x) = Zygote.gradient(u -> f(u), x)[1]
-	H(x) = Hermitian(Zygote.hessian(u -> f(u), x))
+    println("Started searching on boundary after $used_iter")
+    f(x) = intf.prob.obj(transform(x, intf.prob.χ, intf.prob.h))
+    g(x) = Zygote.gradient(u -> f(u), x)[1]
+    H(x) = Zygote.hessian(u -> f(u), x)
 
-	cache = NewtonCache(
-		zeros(length(x0) - 1),
-		inverse_transform(x0, intf.prob.χ, intf.prob.h),
-		zeros(length(x0) - 1),
-		intf.prob.obj(x0),
-		Inf,
-		g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
-		H(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
-		Inf,
-		0,
-	)
-	ϕ(α) = f(cache.xk + α * cache.s)
-	dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
-	ϕdϕ(α) = (ϕ(α), dϕ(α))
+    cache = NewtonCache(
+        zeros(length(x0) - 1),
+        inverse_transform(x0, intf.prob.χ, intf.prob.h),
+        zeros(length(x0) - 1),
+        intf.prob.obj(x0),
+        Inf,
+        g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
+        H(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
+        Inf,
+        used_iter
+    )
+    ϕ(α) = f(cache.xk + α * cache.s)
+    dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
+    ϕdϕ(α) = (ϕ(α), dϕ(α))
 
 	state = newton!(cache,
 		linesearch,

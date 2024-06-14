@@ -23,11 +23,11 @@ function ConstrainedProblem(χ, h, mₚ, S; kwags...)
 
 	hes(x) = Zygote.hessian(S, x)
 
+    obj(u) = S(u) - u ⋅ mₚ
+    ∇obj(u) = jac(u) - mₚ
+    ∇²obj = hes
 
-	obj(u) = S(u) - u ⋅ mₚ
-	∇obj(u) = jac(u) - mₚ
-	∇²obj(x) = Hermitian(Zygote.hessian(S, x))
-	ConstrainedProblem(χ, h, mₚ, obj, ∇obj, ∇²obj, S, jac, hes)
+    ConstrainedProblem(χ, h, mₚ, obj, ∇obj, ∇²obj, S, jac, hes)
 end
 
 struct UnconstrainedProblem
