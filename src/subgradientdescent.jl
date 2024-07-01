@@ -1,8 +1,8 @@
 include("interface.jl")
 
 function checkconvergence!(cache::AbstractCache, intf::Interface)
-	if cache.xk ≈ intf.prob.mₚ
-        cache.err = norm(cache.xk - intf.prob.mₚ)
+	if isapprox(cache.xk,intf.prob.mₚ,rtol = intf.tol)
+        cache.err = norm(cache.s)
 		if norm(intf.prob.∂U(cache.xk) - intf.prob.h) ≤ intf.prob.χ
 			return true
 		end

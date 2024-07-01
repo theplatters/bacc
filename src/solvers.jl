@@ -79,7 +79,6 @@ end
 
 function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_transform, used_iter)
 
-    println("Started searching on boundary after $used_iter")
     f(x) = intf.prob.obj(transform(x, intf.prob.χ, intf.prob.h))
     g(x) = Zygote.gradient(u -> f(u), x)[1]
     H(x) = Zygote.hessian(u -> f(u), x)
@@ -131,7 +130,6 @@ function newton!(cache::NewtonCache, linesearch, f, g, H, ϕ, dϕ, ϕdϕ, max_it
 		cache.Hfk = H(cache.xk)
 
 		cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
-		@info cache.iter cache.err
 		if cache.err <= tol
 			return :converged
 		end
@@ -145,7 +143,6 @@ function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
 	if (isposdef(A))
 		return nothing
 	end
-	@info "Adapting Cholesky Factorization to make Hessian positive definite."
 	if any(diag(A) .<= 0)
 		τ = 0
 	else
@@ -153,7 +150,6 @@ function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
 	end
 
 	for i in 1:max_iter
-		@info i τ, A
 		A = A + τ * I
 		if isposdef(A)
 			return nothing
@@ -251,54 +247,5 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch)
 		end
 
 	end
-	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
-end
-
-function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
-	cache = NewtonCache(
-		zeros(length(intf.x0)),
-		intf.x0,
-		intf.x0,
-		intf.prob.obj(intf.x0),
-		Inf,
-		intf.prob.∇obj(intf.x0),
-		intf.prob.∇²obj(intf.x0),
-		Inf,
-		0,
-	)
-    for p in range(1,0.5,10)
-        cache.iter = 0
-        f(x) = intf.prob.obj(x) + p * max(0, norm(x - intf.prob.h)^2 - intf.prob.χ^2)   
-        g(x) = Zygote.gradient(f, x)[1]
-
-        ϕ(α) = f(cache.xk + α * cache.s) 
-        dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
-        ϕdϕ(α) = (ϕ(α), dϕ(α))
-
-
-        for i ∈ 1:intf.max_iter
-            cache.iter += 1
-
-            if norm(cache.xk - intf.prob.h) ≈ intf.prob.χ
-                cache.Hfk = intf.prob.∇²obj(cache.xk) + Diagonal(ones(3))
-                @info "This case" cache.xk, cache.dfk cache.Hfk[1]
-            else
-                cache.Hfk = Zygote.hessian(f, cache.xk)
-            end
-
-            newton_step!(cache, f, g, cache.Hfk)
-            dϕ₀ = dot(cache.s, cache.dfk)
-            #α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-
-            cache.xk += cache.s
-            cache.dfk = g(cache.xk)
-
-            cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
-            if(cache.err ≤ intf.tol)
-                return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
-            end
-
-        end
-    end
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 end
