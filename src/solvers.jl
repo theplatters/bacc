@@ -1,5 +1,6 @@
 include("subgradientdescent.jl")
 using LinearSolve: LinearSolve
+using LinearAlgebra
 
 function transform_to_euklidean_3D(w, r, m)
 	m + [r * sin(w[1]) * cos(w[2]), r * sin(w[1]) * sin(w[2]), r * cos(w[1])]
@@ -140,7 +141,7 @@ function newton!(cache::NewtonCache, linesearch, f, g, H, ϕ, dϕ, ϕdϕ, max_it
 end
 
 function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
-	A = Symetric(A)
+	A = Symmetric(A)
 	if (isposdef(A))
 		return nothing
 	end
@@ -205,7 +206,7 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem})
 	return Solution(cache.xk, intf.prob.obj(cache.xk), false, intf.max_iter, cache.err)
 end
 
-function semi_smooth_newton(intf::Interface; linesearch)
+function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch)
 	cache = NewtonCache(
 		zeros(length(intf.x0)),
 		intf.x0,
@@ -250,5 +251,54 @@ function semi_smooth_newton(intf::Interface; linesearch)
 		end
 
 	end
+	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
+end
+
+function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
+	cache = NewtonCache(
+		zeros(length(intf.x0)),
+		intf.x0,
+		intf.x0,
+		intf.prob.obj(intf.x0),
+		Inf,
+		intf.prob.∇obj(intf.x0),
+		intf.prob.∇²obj(intf.x0),
+		Inf,
+		0,
+	)
+    for p in range(1,0.5,10)
+        cache.iter = 0
+        f(x) = intf.prob.obj(x) + p * max(0, norm(x - intf.prob.h)^2 - intf.prob.χ^2)   
+        g(x) = Zygote.gradient(f, x)[1]
+
+        ϕ(α) = f(cache.xk + α * cache.s) 
+        dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
+        ϕdϕ(α) = (ϕ(α), dϕ(α))
+
+
+        for i ∈ 1:intf.max_iter
+            cache.iter += 1
+
+            if norm(cache.xk - intf.prob.h) ≈ intf.prob.χ
+                cache.Hfk = intf.prob.∇²obj(cache.xk) + Diagonal(ones(3))
+                @info "This case" cache.xk, cache.dfk cache.Hfk[1]
+            else
+                cache.Hfk = Zygote.hessian(f, cache.xk)
+            end
+
+            newton_step!(cache, f, g, cache.Hfk)
+            dϕ₀ = dot(cache.s, cache.dfk)
+            #α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
+
+            cache.xk += cache.s
+            cache.dfk = g(cache.xk)
+
+            cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
+            if(cache.err ≤ intf.tol)
+                return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
+            end
+
+        end
+    end
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 end
