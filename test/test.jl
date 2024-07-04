@@ -25,13 +25,13 @@ S(u) = u' * A * u + b' * u
 #S(u) = 2 / π * m * norm(u) * atan(norm(u) / a) + 1 / 2 * log(a^2 + norm(u)^2)
 #S(u) = log(exp(u[1])+ exp(u[2]) + 1)
 
-prob = UnconstrainedProblem(χ, h, mₚ, S)
-intf = Interface(prob, ones(3) +rand(3), 2000, 10e-8)
+prob = ConstrainedProblem(χ, h, mₚ, S)
+intf = Interface(prob, sol1.sol, 200, 10e-8)
 
-sol1 = solve(intf, :subgradientdescent, linesearch = StrongWolfe())
+sol1 = solve(intf, :semi_smooth_newton, linesearch = StrongWolfe())
 
-#sol2 = solve(intf, :newton, linesearch=HagerZhang())
-sol3 = solve(intf, :proximal_gradient, linesearch = StrongWolfe())
+sol2 = solve(intf, :newton, linesearch=HagerZhang())
+sol3 = solve(intf, :newton, linesearch = StrongWolfe())
 #sol4 = solve(intf, :newton, linesearch=ls)
 @benchmark (
 	intf = Interface(prob, ones(3) + rand(3), 1000, 10e-8),

@@ -93,16 +93,4 @@ visualize!(:newton, "quadr")
 
 tune!(suite)
 
-suite
-
 benchmark_results = run(suite)
-
-f = test_fun_1_builder(ms, a)
-plotfun(x, y) = f([x, y])
-
-
-x = range(-66, 66, length=100)
-y = range(-66, 66, length=100)
-Plots.surface(x, y, plotfun)
-
-f([65, 0])
