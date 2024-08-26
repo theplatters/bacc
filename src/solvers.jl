@@ -293,7 +293,6 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
 		
 		cache.iter += 1
   		cache.xk = cache.xk .+ α * cache.s
-		cache.fk = intf.prob.obj(cache.xk[1:end-1])
         cache.dfk = g(cache.xk)
         cache.Hfk = G(cache.xk)
         cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
