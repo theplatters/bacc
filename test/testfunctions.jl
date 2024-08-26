@@ -1,5 +1,6 @@
 using BenchmarkTools, Plots, Profile, Zygote, LinearAlgebra, LineSearches
 using Bachelorarbeit
+using CSV
 
 function quadratic_builder(A::Matrix, b::Vector, c::Real)
     return x -> 0.5 * x' * A * x + b' * x
@@ -41,7 +42,7 @@ for accuracy in [2.0^(-l) for l in 2:20]
             push!(iters_to_accuracy, SolutionComparison(method, accuracy, f.first, sol.converged, sol.iter))
             suite["constrained"][f.first][string(method)][accuracy] = @benchmarkable solve($unconstrained_intf, $method, linesearch=BackTracking())
         end
-        for method in [:newton]
+        for method in [:newton, semi_smooth_newton]
             constrained_prob = ConstrainedProblem(χ, h, mₚ, f.second)
             const_intf = Interface(constrained_prob, -ones(3), 2000, accuracy)
             sol = solve(const_intf, method, linesearch=BackTracking())
@@ -94,3 +95,28 @@ visualize!(:newton, "quadr")
 tune!(suite)
 
 benchmark_results = run(suite)
+
+CSV.write("data/benchmark_results.csv", benchmark_results) 
+
+function simulate_hysteresis()
+    mₛ = 1.23
+    A = 38 * 10e-6
+    χ = 71 * 10e-6
+    f = test_fun_1_builder(mₛ, A)
+    mₚ = zeros(3)
+    steps = 100
+    ms= zeros(steps,3)
+    h = zeros(3)
+    for i in 1:steps
+        h += ones(3) * 10e-16
+        intf = Interface(ConstrainedProblem(χ, h,mₚ, f), mₚ + 10e-4 * rand(3), 2000, 1e-6)
+        sol = solve(intf, :semi_smooth_newton, linesearch=StrongWolfe())
+        @info sol 
+        mₚ = sol.sol
+        ms[i,:] = mₚ
+    end
+    ms
+end
+
+m = simulate_hysteresis()
+m[:,1] |> x -> Plots.plot(x, label="x")
