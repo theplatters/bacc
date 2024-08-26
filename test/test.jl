@@ -1,4 +1,3 @@
-using Revise
 using BenchmarkTools, Plots, Profile, Zygote, LinearAlgebra, LineSearches
 using Bachelorarbeit
 plotlyjs()
