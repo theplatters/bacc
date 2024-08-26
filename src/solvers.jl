@@ -204,7 +204,7 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem})
     return Solution(cache.xk, intf.prob.obj(cache.xk), false, intf.max_iter, cache.err)
 end
 
-#= function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch)
+function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch)
 	cache = NewtonCache(
 		zeros(length(intf.x0)),
 		intf.x0,
@@ -250,7 +250,7 @@ end
 
 	end
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
-end =#
+end
 
 
 function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
@@ -298,7 +298,6 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
         cache.fk = intf.prob.obj(cache.xk[1:end-1] .+ α * cache.s[1:end-1])
 		cache.iter += 1
   		cache.xk = cache.xk .+ α * cache.s
-		cache.fk = intf.prob.obj(cache.xk[1:end-1])
         cache.dfk = g(cache.xk)
         cache.Hfk = G(cache.xk)
         cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))

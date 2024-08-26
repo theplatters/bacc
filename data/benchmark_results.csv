@@ -1,0 +1,117 @@
+first,second
+constrained,"2-element BenchmarkTools.BenchmarkGroup:
+  tags: []
+  ""lit"" => 3-element BenchmarkTools.BenchmarkGroup:
+	  tags: []
+	  ""semi_smooth_newton"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(73.390 μs)
+		  6.103515625e-5 => Trial(79.260 μs)
+		  0.001953125 => Trial(75.030 μs)
+		  0.25 => Trial(53.800 μs)
+		  7.62939453125e-6 => Trial(81.750 μs)
+		  0.0009765625 => Trial(80.399 μs)
+		  3.0517578125e-5 => Trial(82.069 μs)
+		  0.03125 => Trial(68.320 μs)
+		  1.52587890625e-5 => Trial(80.569 μs)
+		  0.00048828125 => Trial(81.930 μs)
+		  ⋮
+	  ""subgradientdescent"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(25.280 μs)
+		  6.103515625e-5 => Trial(42.370 μs)
+		  0.001953125 => Trial(36.610 μs)
+		  0.25 => Trial(9.740 μs)
+		  7.62939453125e-6 => Trial(42.190 μs)
+		  0.0009765625 => Trial(36.660 μs)
+		  3.0517578125e-5 => Trial(42.280 μs)
+		  0.03125 => Trial(17.160 μs)
+		  1.52587890625e-5 => Trial(42.060 μs)
+		  0.00048828125 => Trial(42.140 μs)
+		  ⋮
+	  ""proximal_gradient"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(6.910 μs)
+		  6.103515625e-5 => Trial(15.960 μs)
+		  0.001953125 => Trial(9.880 μs)
+		  0.25 => Trial(4.043 μs)
+		  7.62939453125e-6 => Trial(18.679 μs)
+		  0.0009765625 => Trial(12.570 μs)
+		  3.0517578125e-5 => Trial(15.450 μs)
+		  0.03125 => Trial(6.915 μs)
+		  1.52587890625e-5 => Trial(18.580 μs)
+		  0.00048828125 => Trial(12.600 μs)
+		  ⋮
+  ""quadr"" => 3-element BenchmarkTools.BenchmarkGroup:
+	  tags: []
+	  ""semi_smooth_newton"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(48.950 μs)
+		  6.103515625e-5 => Trial(95.780 μs)
+		  0.001953125 => Trial(67.140 μs)
+		  0.25 => Trial(24.640 μs)
+		  7.62939453125e-6 => Trial(105.589 μs)
+		  0.0009765625 => Trial(75.080 μs)
+		  3.0517578125e-5 => Trial(105.829 μs)
+		  0.03125 => Trial(41.180 μs)
+		  1.52587890625e-5 => Trial(104.379 μs)
+		  0.00048828125 => Trial(85.129 μs)
+		  ⋮
+	  ""subgradientdescent"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(32.380 μs)
+		  6.103515625e-5 => Trial(73.490 μs)
+		  0.001953125 => Trial(48.470 μs)
+		  0.25 => Trial(14.910 μs)
+		  7.62939453125e-6 => Trial(80.230 μs)
+		  0.0009765625 => Trial(54.560 μs)
+		  3.0517578125e-5 => Trial(73.119 μs)
+		  0.03125 => Trial(27.830 μs)
+		  1.52587890625e-5 => Trial(80.560 μs)
+		  0.00048828125 => Trial(60.570 μs)
+		  ⋮
+	  ""proximal_gradient"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(2.488 ms)
+		  6.103515625e-5 => Trial(2.578 ms)
+		  0.001953125 => Trial(2.575 ms)
+		  0.25 => Trial(2.572 ms)
+		  7.62939453125e-6 => Trial(2.560 ms)
+		  0.0009765625 => Trial(2.582 ms)
+		  3.0517578125e-5 => Trial(2.584 ms)
+		  0.03125 => Trial(2.586 ms)
+		  1.52587890625e-5 => Trial(2.491 ms)
+		  0.00048828125 => Trial(2.613 ms)
+		  ⋮"
+unconstrained,"2-element BenchmarkTools.BenchmarkGroup:
+  tags: []
+  ""lit"" => 1-element BenchmarkTools.BenchmarkGroup:
+	  tags: []
+	  ""newton"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(79.060 μs)
+		  6.103515625e-5 => Trial(107.639 μs)
+		  0.001953125 => Trial(109.259 μs)
+		  0.25 => Trial(74.150 μs)
+		  7.62939453125e-6 => Trial(146.699 μs)
+		  0.0009765625 => Trial(111.519 μs)
+		  3.0517578125e-5 => Trial(143.809 μs)
+		  0.03125 => Trial(79.080 μs)
+		  1.52587890625e-5 => Trial(146.809 μs)
+		  0.00048828125 => Trial(110.949 μs)
+		  ⋮
+  ""quadr"" => 1-element BenchmarkTools.BenchmarkGroup:
+	  tags: []
+	  ""newton"" => 19-element BenchmarkTools.BenchmarkGroup:
+		  tags: []
+		  0.015625 => Trial(187.808 μs)
+		  6.103515625e-5 => Trial(189.879 μs)
+		  0.001953125 => Trial(188.729 μs)
+		  0.25 => Trial(153.649 μs)
+		  7.62939453125e-6 => Trial(228.248 μs)
+		  0.0009765625 => Trial(194.099 μs)
+		  3.0517578125e-5 => Trial(233.689 μs)
+		  0.03125 => Trial(157.359 μs)
+		  1.52587890625e-5 => Trial(233.749 μs)
+		  0.00048828125 => Trial(194.839 μs)
+		  ⋮"
