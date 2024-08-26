@@ -25,7 +25,7 @@ S(u) = u' * A * u + b' * u
 #S(u) = log(exp(u[1])+ exp(u[2]) + 1)
 
 prob = ConstrainedProblem(χ, h, mₚ, S)
-intf = Interface(prob, sol1.sol, 200, 10e-8)
+intf = Interface(prob, ones(3), 200, 10e-8)
 
 sol1 = solve(intf, :semi_smooth_newton, linesearch = StrongWolfe())
 
@@ -39,7 +39,7 @@ sol3 = solve(intf, :newton, linesearch = StrongWolfe())
 
 sol1.sol - sol3.sol
 
-sol1.sol - h |> norm
+ones(3) - h |> norm
 
 @profview [solve(intf, :subgradientdescent, linesearch = StrongWolfe()) for i in 1:100]
 

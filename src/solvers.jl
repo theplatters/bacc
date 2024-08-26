@@ -2,6 +2,8 @@ include("subgradientdescent.jl")
 using LinearSolve: LinearSolve
 using LinearAlgebra
 
+
+
 function transform_to_euklidean_3D(w, r, m)
     m + [r * sin(w[1]) * cos(w[2]), r * sin(w[1]) * sin(w[2]), r * cos(w[1])]
 end
@@ -254,17 +256,18 @@ end =#
 function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
 
     g(x) = vcat(
-        intf.prob.∇obj(x[1:end-1]) + 2 * x[end] * x[1:end-1],
+        intf.prob.∇obj(x[1:end-1]) + 2 * x[end] * (x[1:end-1] - intf.prob.h),
         max(0, x[end] + norm(x[1:end-1] - intf.prob.h)^2 - intf.prob.χ^2) - x[end])
 
     function G(x)
         df1 = [
             (x[end] + norm(x[1:end-1] - intf.prob.h)^2 - intf.prob.χ^2 .> 0) .* 2 * (x[1:end-1] - intf.prob.h)
             (norm(x[1:end-1] - intf.prob.h)^2 - intf.prob.χ^2) + x[end] ≤ 0 ? -1 : 0]
-        [intf.prob.∇²obj(x[1:end-1])+2*x[end]*I 2*x[1:end-1]-intf.prob.h; df1']
+        [intf.prob.∇²obj(x[1:end-1])+2*x[end]*I 2*(x[1:end-1]-intf.prob.h); df1']
     end
 
-    x0 = vcat(intf.x0, intf.prob.χ - norm(intf.x0 - intf.prob.h))
+    x0 = vcat(intf.x0, 1)
+    #intf.prob.χ - norm(intf.x0 - intf.prob.h))
 
     cache = NewtonCache(
         zeros(length(intf.x0) + 1),
@@ -287,10 +290,12 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
         end
         newton_step!(cache, false)
 		println(cache.s)
-        @info cache.iter cache.s cache.Hfk
+        #@info cache.iter cache.s cache.Hfk
         dϕ₀ = dot(cache.s[1:end-1], cache.dfk[1:end-1])
-        α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-		
+        #α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
+        #println("Alpha:",α)
+		α = 1
+        cache.fk = intf.prob.obj(cache.xk[1:end-1] .+ α * cache.s[1:end-1])
 		cache.iter += 1
   		cache.xk = cache.xk .+ α * cache.s
 		cache.fk = intf.prob.obj(cache.xk[1:end-1])
@@ -298,5 +303,5 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
         cache.Hfk = G(cache.xk)
         cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
     end
-    return (Solution(cache.xk[1:end-1], cache.fk, false, cache.iter, cache.err))
+    return (Solution(cache.xk[1:end-1], cache.fk, false, cache.iter, cache.err),cache.xk[end])
 end
