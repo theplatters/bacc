@@ -42,7 +42,7 @@ for accuracy in [2.0^(-l) for l in 2:20]
             push!(iters_to_accuracy, SolutionComparison(method, accuracy, f.first, sol.converged, sol.iter))
             suite["constrained"][f.first][string(method)][accuracy] = @benchmarkable solve($unconstrained_intf, $method, linesearch=BackTracking())
         end
-        for method in [:newton, semi_smooth_newton]
+        for method in [:newton, :semi_smooth_newton]
             constrained_prob = ConstrainedProblem(χ, h, mₚ, f.second)
             const_intf = Interface(constrained_prob, -ones(3), 2000, accuracy)
             sol = solve(const_intf, method, linesearch=BackTracking())
@@ -113,8 +113,8 @@ function simulate_hysteresis()#
         h = [600 * unit * sin(t),0]
         intf = Interface(ConstrainedProblem(χ, h,mₚ, f), mₚ + unit * 10e-1 * ones(2), 2000, 1e-6)
         sol = solve(intf, :semi_smooth_newton, linesearch=StrongWolfe())
-        @info sol 
-        mₚ = sol.sol
+        @info sol.first
+        mₚ = first(sol).sol
         ms[i,:] = mₚ
     end
     for i in 1:steps
