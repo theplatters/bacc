@@ -98,22 +98,34 @@ benchmark_results = run(suite)
 
 CSV.write("data/benchmark_results.csv", benchmark_results) 
 
-function simulate_hysteresis()
-    mₛ = 1.23
-    A = 38 * 10e-6
-    χ = 71 * 10e-6
+function simulate_hysteresis()#
+    unit = 10e2
+    mₛ = 1.23 * 10e6 * unit
+    A = 38 * unit
+    χ = 71 * unit
     f = test_fun_1_builder(mₛ, A)
-    mₚ = zeros(3)
+    mₚ = zeros(2)
     steps = 100
-    ms= zeros(steps,3)
-    h = zeros(3)
+    ms= zeros(2 * steps,2)
+    h = ones(3)
     for i in 1:steps
-        h += ones(3) * 10e-16
-        intf = Interface(ConstrainedProblem(χ, h,mₚ, f), mₚ + 10e-4 * rand(3), 2000, 1e-6)
+        t = π/2 * i / steps
+        h = [600 * unit * sin(t),0]
+        intf = Interface(ConstrainedProblem(χ, h,mₚ, f), mₚ + unit * 10e-1 * ones(2), 2000, 1e-6)
         sol = solve(intf, :semi_smooth_newton, linesearch=StrongWolfe())
         @info sol 
         mₚ = sol.sol
         ms[i,:] = mₚ
+    end
+    for i in 1:steps
+        t = π/2 * (steps - i) / steps
+        h = [600 * unit * sin(t),0]
+        intf = Interface(ConstrainedProblem(χ, h,mₚ, f), mₚ - 10e-1 * unit * ones(2), 2000, 1e-6)
+        sol = solve(intf, :semi_smooth_newton, linesearch=StrongWolfe())
+        @info sol 
+        mₚ = sol.sol
+        @info norm(mₚ- h) - χ
+        ms[steps + i,:] = mₚ
     end
     ms
 end

@@ -289,7 +289,6 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
             return Solution(cache.xk[1:end-1], cache.fk, true, cache.iter, cache.err)
         end
         newton_step!(cache, false)
-		println(cache.s)
         #@info cache.iter cache.s cache.Hfk
         dϕ₀ = dot(cache.s[1:end-1], cache.dfk[1:end-1])
         #α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
@@ -302,5 +301,5 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch)
         cache.Hfk = G(cache.xk)
         cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
     end
-    return (Solution(cache.xk[1:end-1], cache.fk, false, cache.iter, cache.err),cache.xk[end])
+    return Solution(cache.xk[1:end-1], cache.fk, false, cache.iter, cache.err)
 end
