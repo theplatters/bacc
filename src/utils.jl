@@ -1,17 +1,17 @@
-
+include("interface.jl")
 function transform_to_euklidean_3D(w, r, m)
-    m + [r * sin(w[1]) * cos(w[2]), r * sin(w[1]) * sin(w[2]), r * cos(w[1])]
+	m + [r * sin(w[1]) * cos(w[2]), r * sin(w[1]) * sin(w[2]), r * cos(w[1])]
 end
 
 
 function transform_to_radial_3D(x, r, m)
-    [acos((x[3] - m[3]) / r), atan(x[2] - m[2], x[1] - m[1])]
+	[acos((x[3] - m[3]) / r), atan(x[2] - m[2], x[1] - m[1])]
 end
 
 transform_to_euklidean_2D(w, r, m) = [r * cos(w[1]), r * sin(w[1])] + m
 
 function transform_to_radial_2D(x, r, m)
-    return [atan(x[2] - m[2], x[1] - m[1])]
+	return [atan(x[2] - m[2], x[1] - m[1])]
 end
 
 function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
@@ -36,21 +36,27 @@ function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
 	return nothing
 end
 
+
+short_circuit_exit(intf) = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
+
 function checkconvergence!(cache::AbstractCache, intf::Interface)
-	if isapprox(cache.xk,intf.prob.mₚ,rtol = intf.tol)
-        cache.err = norm(cache.s)
-		if norm(intf.prob.∂U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
-			return true
-		end
-	else
-		cache.err = norm(intf.prob.∇obj(cache.xk))
-		if (cache.err ≤ intf.tol)
-			return true
-		end
+	if isapprox(cache.xk, intf.prob.mₚ, atol = 10e-8)
+		cache.err = norm(cache.xk - cache.xold)
+    else
+        cache.err = residium(cache.xk, intf)
+    end
+    
+	if (cache.err ≤ intf.tol)
+		return true
 	end
-	false
+    
+    return false
 end
 
-function residium(cache::T, intf) where {T <: AbstractCache}
-    
+residium(xk, intf) = norm(intf.prob.∇obj(xk))
+
+function boundary_residium(xk::Vector{T}, intf::Interface)::T where {T <: Real}
+	grad = intf.prob.∇obj(xk)
+	n = xk - intf.prob.h
+	norm(grad - ((grad ⋅ n) / (n ⋅ n)) * n)
 end

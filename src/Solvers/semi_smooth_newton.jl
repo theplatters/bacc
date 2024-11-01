@@ -1,8 +1,11 @@
 function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, callback)
+
+	short_circuit_exit(intf) && return Solution(intf.prob.mₚ, intf.prob.obj(intf.prob.mₚ), true, 0, 0.0)
+
 	cache = NewtonCache(
 		zeros(length(intf.x0)),
 		intf.x0,
-		intf.x0,
+		fill(typemax(eltype(intf.x0)), length(intf.x0)),
 		intf.prob.obj(intf.x0),
 		Inf,
 		intf.prob.∇obj(intf.x0),
@@ -15,40 +18,42 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
 	dϕ(α) = intf.prob.∇obj(cache.xk .+ α * cache.s) ⋅ cache.s
 	ϕdϕ(α) = (ϕ(α), dϕ(α))
 
-
 	for i ∈ 1:intf.max_iter
 
-		if (!isnothing(callback))
+		if !isnothing(callback)
 			callback(cache, intf)
 		end
+
 		if cache.xk ≈ intf.prob.mₚ
-			if norm(intf.prob.∂U(cache.xk) - intf.prob.h) ≤ intf.prob.χ
-				return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
-			else
-				cache.xk = cache.xk + intf.prob.χ * (intf.prob.mₚ + rand(length(intf.x0)))
-				cache.dfk = intf.prob.∇obj(cache.xk)
-				cache.Hfk = intf.prob.∇²obj(cache.xk)
-			end
+            cache.dfk = intf.prob.∇U(cache.xk) - intf.prob.h + ones(length(intf.x0)) / sqrt(length(intf.x0))
+            cache.Hfk = intf.prob.∇²U(cache.xk)
 		else
-			cache.iter += 1
+            cache.dfk = intf.prob.∇obj(cache.xk)
+            cache.Hfk = intf.prob.∇²obj(cache.xk)
+        end
+        
+        newton_step!(cache)
 
-			newton_step!(cache)
-			dϕ₀ = dot(cache.s, cache.dfk)
-
-			α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-
-			cache.xk += α * cache.s
-			cache.dfk = intf.prob.∇obj(cache.xk)
-			cache.Hfk = intf.prob.∇²obj(cache.xk)
-
-			checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, i, cache.err)
-
-		end
-
+        dϕ₀ = dot(cache.s, cache.dfk)
+        
+        α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
+        cache.xk += α * cache.s
+        
+        cache.iter += 1
+        checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, i, cache.err)
+        
 	end
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 end
 
+function calculate_error!(cache, intf)
+	if (isapprox(norm(cache.xk[1:end-1] - intf.prob.h) - intf.prob.χ, 0, atol = 1e-8))
+		cache.err = boundary_residium(cache.xk[1:end-1], intf)
+	else
+		cache.err = residium(cache.xk[1:end-1], intf)
+	end
+    nothing
+end
 
 function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, callback)
 
@@ -82,26 +87,24 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, cal
 
 	for i in 1:intf.max_iter
 
-		if (!isnothing(callback))
-			callback(cache, intf)
-		end
-
+        
 		if (cache.err < intf.tol)
 			return Solution(cache.xk[1:end-1], cache.fk, true, cache.iter, cache.err)
 		end
 		newton_step!(cache, false)
-		println(cache.s)
-		#@info cache.iter cache.s cache.Hfk
 		dϕ₀ = dot(cache.s[1:end-1], cache.dfk[1:end-1])
-		#α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-		#println("Alpha:",α)
 		α = 1
 		cache.fk = intf.prob.obj(cache.xk[1:end-1] .+ α * cache.s[1:end-1])
 		cache.iter += 1
 		cache.xk = cache.xk .+ α * cache.s
 		cache.dfk = g(cache.xk)
 		cache.Hfk = G(cache.xk)
-		cache.err = max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk)))
+        
+        calculate_error!(cache,intf)
+        if (!isnothing(callback))
+            callback(cache, intf)
+        end
+
 	end
 	return (Solution(cache.xk[1:end-1], cache.fk, false, cache.iter, cache.err), cache.xk[end])
 end

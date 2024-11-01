@@ -9,7 +9,7 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 	cache = NewtonCache(
 		zeros(length(intf.x0)),
 		intf.x0,
-		intf.x0,
+		fill(typemax(eltype(intf.x0)), length(intf.x0)),
 		intf.prob.obj(intf.x0),
 		Inf,
 		intf.prob.∇obj(intf.x0),
@@ -35,7 +35,7 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 		intf.tol,
 		interior_violated = x -> norm(x - intf.prob.h) > intf.prob.χ,
 		callback = callback,
-		error_function = (cache, intf) -> norm(cache.dfk))
+		error_function = (cache,intf) -> residium(cache.xk,intf))
 
 	if state == :converged
 		return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
@@ -61,9 +61,9 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 	H(x) = Zygote.hessian(u -> f(u), x)
 
 	cache = NewtonCache(
-		zeros(length(x0) - 1),
+		zeros(length(intf.x0) - 1),
 		inverse_transform(x0, intf.prob.χ, intf.prob.h),
-		zeros(length(x0) - 1),
+		fill(typemax(eltype(x0)), length(x0) - 1),
 		intf.prob.obj(x0),
 		Inf,
 		g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
@@ -75,6 +75,11 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 	dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
 	ϕdϕ(α) = (ϕ(α), dϕ(α))
 
+	if length(cache.xk) == 1
+		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_2D(cache.xk, intf.prob.χ, intf.prob.h), intf)
+	else
+		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_3D(cache.xk, intf.prob.χ, intf.prob.h), intf)
+	end
 
 	state = newton!(
 		intf,
@@ -90,24 +95,7 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 		intf.tol,
 		guaranteedconvex = false,
 		callback = callback,
-		error_function = length(x0) == 2 ? (cache::NewtonCache, intf::Interface) ->
-			begin
-				xk = transform_to_euklidean_2D(cache.xk, intf.prob.χ, intf.prob.h)
-				## gradient
-				∇f = intf.prob.∇obj(xk)
-				## Normalvektor
-				n = xk - intf.prob.h
-				norm(∇f - (∇f ⋅ n) / (n ⋅ n) * n)
-			end :
-						 (cache::NewtonCache, intf::Interface) ->
-			begin
-				xk = transform_to_euklidean_3D(cache.xk, intf.prob.χ, intf.prob.h)
-				## gradient
-				∇f = intf.prob.∇obj(xk)
-				## Normalvektor
-				n = xk - intf.prob.h
-				norm(∇f - (∇f ⋅ n) / (n ⋅ n) * n)
-			end,)
+		error_function = err_fun)
 
 	xk = transform(cache.xk, intf.prob.χ, intf.prob.h)
 	Solution(xk, cache.fk, state == :converged ? true : false, cache.iter, cache.err)
@@ -134,18 +122,18 @@ function newton!(
 		newton_step!(cache, guaranteedconvex)
 		dϕ₀ = dot(cache.s, cache.dfk)
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-
+		
 		cache.xk += α * cache.s
 		if interior_violated(cache.xk)
 			return :outside
 		end
-
+		
 		cache.dfk = g(cache.xk)
 		cache.Hfk = H(cache.xk)
-
+		
 		cache.err = error_function(cache, intf)
 		if !isnothing(callback)
-			callback(cache)
+			callback(cache, intf)
 		end
 		if cache.err <= tol
 			return :converged

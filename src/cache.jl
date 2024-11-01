@@ -20,12 +20,12 @@ mutable struct NewtonCache <: AbstractCache
     iter::Int64
 end
 
-function print(io::IO, cache::NewtonCache)
+function Base.print(io::IO, cache::NewtonCache)
     println("On Iteratation $(cache.iter):")
     println("Function value f = $(cache.fk) with xk = $(cache.xk)")
 end
 
-function print(io::IO, cache::Cache)
+function Base.print(io::IO, cache::Cache)
     println("On Iteratation $(cache.iter):")
     println("Function value f = $(cache.fk) with xk = $(cache.xk)")
 end
