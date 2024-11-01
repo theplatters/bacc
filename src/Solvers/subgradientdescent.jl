@@ -1,20 +1,3 @@
-include("interface.jl")
-
-function checkconvergence!(cache::AbstractCache, intf::Interface)
-	if isapprox(cache.xk,intf.prob.mₚ,rtol = intf.tol)
-        cache.err = norm(cache.s)
-		if norm(intf.prob.∂U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
-			return true
-		end
-	else
-		cache.err = norm(intf.prob.∇obj(cache.xk))
-		if (cache.err ≤ intf.tol)
-			return true
-		end
-	end
-	false
-end
-
 function subgradientdescent(intf::Interface{UnconstrainedProblem}; linesearch)
 	cache = Cache(
 		zeros(length(intf.x0)),
