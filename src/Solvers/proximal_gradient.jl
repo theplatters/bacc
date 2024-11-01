@@ -5,7 +5,7 @@ function proxOfNorm(x, λ, mp)
 end
 
 
-function proximal_gradient(intf::Interface{UnconstrainedProblem})
+function proximal_gradient(intf::Interface{UnconstrainedProblem}; callback)
     s = 0.1
     η = 1.001
     Lk = 0.1
@@ -16,6 +16,10 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem})
     T(∂f, Lk, xk, dfk) = proxOfNorm((xk .- 1 / Lk * dfk), 1 / Lk * intf.prob.χ, intf.prob.mₚ)
 
     for i ∈ 1:intf.max_iter
+
+        if(!isnothing(callback))
+            callback(cache, intf)
+        end
 
         while f(T(∂f, Lk, cache.xk, cache.dfk)) > cache.fk + dot(cache.dfk, (T(∂f, Lk, cache.xk, cache.dfk) - cache.xk)) + Lk / 2 * norm(T(∂f, Lk, cache.xk, cache.dfk) - cache.xk)^2
             Lk = Lk * η

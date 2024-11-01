@@ -8,15 +8,15 @@ include("Solvers/subgradientdescent.jl")
 include("Solvers/proximal_gradient.jl")
 include("Solvers/semi_smooth_newton.jl")
 
-function solve(intf::Interface, algorithm; linesearch)
+function solve(intf::Interface, algorithm; linesearch, callback::Union{Function, Nothing}=nothing)
     if algorithm == :proximal_gradient
-        proximal_gradient(intf)
+        proximal_gradient(intf, callback = callback)
     elseif algorithm == :newton
-        newton(intf, linesearch=linesearch)
+        newton(intf, linesearch=linesearch, callback = callback)
     elseif algorithm == :semi_smooth_newton
-        semi_smooth_newton(intf, linesearch=linesearch)
+        semi_smooth_newton(intf, linesearch=linesearch, callback = callback)
     elseif algorithm == :subgradientdescent
-        subgradientdescent(intf, linesearch=linesearch)
+        subgradientdescent(intf, linesearch=linesearch, callback = callback)
     else
         throw(ArgumentError("Algorithm not implemented"))
     end

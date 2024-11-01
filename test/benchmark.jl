@@ -1,6 +1,4 @@
-
-
-
+using BenchmarkTools 
 struct SolutionComparison
 	method::Symbol
 	constrained::Bool

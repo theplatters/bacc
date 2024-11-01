@@ -1,4 +1,5 @@
 abstract type AbstractCache end
+
 mutable struct Cache <: AbstractCache
     s::Vector{Float64}
     xk::Vector{Float64}
@@ -6,6 +7,7 @@ mutable struct Cache <: AbstractCache
     dfk::Vector{Float64}
     err::Float64
 end
+
 mutable struct NewtonCache <: AbstractCache
     s::Vector{Float64}
     xk::Vector{Float64}

@@ -51,3 +51,6 @@ function checkconvergence!(cache::AbstractCache, intf::Interface)
 	false
 end
 
+function residium(cache::T, intf) where {T <: AbstractCache}
+    
+end
