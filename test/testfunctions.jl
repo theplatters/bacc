@@ -15,9 +15,9 @@ function test_fun_1_conjugate_builder(mₛ, a)
 end
 
 function test_fun_2_builder(mₛ, A)
-	return x -> 2 * mₛ / π * (norm(x) * atan(norm(x) / A) + A * log(A) - 1/2 * A * log(A^2 + norm(x)^2))
+	return x -> (2 * A * mₛ / π) * log(sec(π / (2 * mₛ) * norm(x)))
 end
 
 function test_fun_2_conjugate_builder(mₛ, A)
-	return x -> (2 * A * mₛ / π) * log(sec(π / (2 * mₛ) * norm(x)))
+	return x -> 2 * mₛ / π * (norm(x) * atan(norm(x) / A) + A * log(A) - 1/2 * A * log(A^2 + norm(x)^2))
 end

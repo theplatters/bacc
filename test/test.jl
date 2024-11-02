@@ -4,6 +4,27 @@ using LinearAlgebra
 
 ## Assert, that functions are really convex conjugates
 include("testfunctions.jl")
+
+
+
+
+struct Params2
+    χ::Float64
+    h::Vector{Float64}
+    mₚ::Vector{Float64}
+end
+
+function test_problem(fun, fun_conv, p::Params2)
+	up = UnconstrainedProblem(p.χ, p.h, p.mₚ, fun)
+	ui = Interface(up, p.mₚ, 100000, 1e-8)
+	cp = ConstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
+	ci = Interface(cp, p.h, 100, 1e-8)
+
+
+	uc = solve(ci, :semi_smooth_newton, linesearch = BackTracking()).sol 
+    uuc = solve(ui, :semi_smooth_newton, linesearch = BackTracking()).sol
+    norm(cp.∇S(uc) - uuc) ≤ 1e-9 && norm(up.∇U(uuc) - uc) ≤ 1e-9
+end
 @testset "convex_conjugates" begin
     us = rand(3, 100)
     a = 60
@@ -31,36 +52,11 @@ include("testfunctions.jl")
     end
 end
 
+@testset "convex_conjugate_solutions" begin
+   @test test_problem(test_fun_1_builder(80, 60), test_fun_1_conjugate_builder(80, 60), Params2(16, 10 * ones(3), [0.1, 0.01, 0.2])) 
+   @test test_problem(test_fun_2_builder(80, 60), test_fun_2_conjugate_builder(80, 60), Params2(16, 10 * ones(3), [0.1, 0.01, 0.2])) 
 
-struct Params2
-    χ::Float64
-    h::Vector{Float64}
-    mₚ::Vector{Float64}
-end
-
-data = [Vector{Float64}(undef,0) for i in 1:5]
-function test_problem(fun,fun_conv,p::Params2)
-    up = UnconstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
-    ui = Interface(up,p.mₚ,100000, 1e-8)    
-    cp = ConstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
-    ci = Interface(cp,p.h,100, 1e-8)    
-    
-    calculate_error!(i) = (cache,intf) -> push!(data[i],cache.err)
-
-    @info solve(ci, :newton, linesearch = BackTracking(), callback = calculate_error!(1))
-    @info solve(ci, :semi_smooth_newton, linesearch = BackTracking(), callback = calculate_error!(2))
-    @info solve(ui, :semi_smooth_newton, linesearch = BackTracking(), callback = calculate_error!(3))
-    @info solve(ui, :subgradientdescent, linesearch = BackTracking(), callback = calculate_error!(4))
-    @info solve(ui, :proximal_gradient, linesearch = BackTracking(), callback = calculate_error!(5))
-end
-
-
-p = Params2(16,10*ones(3),[0.1,0.01,0.2])
-test_problem(test_fun_1_builder(80,60),test_fun_1_conjugate_builder(80,60),p)
-
-begin
-    A = randn(3,3); A = A'*A; A = (A + A')/2
-    b = rand(3)
-    c = 5
-    test_problem(quadratic_builder(A,b,c),quadratic_conjugate_builder(A,b,c),p)
+   @test test_problem(test_fun_1_builder(80, 60), test_fun_1_conjugate_builder(80, 60), Params2(16, 1 * ones(3), [0.1, 0.01, 0.2])) 
+   @test test_problem(test_fun_2_builder(80, 60), test_fun_2_conjugate_builder(80, 60), Params2(16, 1 * ones(3), [0.1, 0.01, 0.2])) 
+   
 end

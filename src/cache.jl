@@ -6,6 +6,7 @@ mutable struct Cache <: AbstractCache
     fk::Float64
     dfk::Vector{Float64}
     err::Float64
+    iter::Int64
 end
 
 mutable struct NewtonCache <: AbstractCache

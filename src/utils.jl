@@ -41,7 +41,7 @@ short_circuit_exit(intf) = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) �
 
 function checkconvergence!(cache::AbstractCache, intf::Interface)
 	if isapprox(cache.xk, intf.prob.mₚ, atol = 10e-8)
-		cache.err = norm(cache.xk - cache.xold)
+		cache.err = norm(cache.s)
     else
         cache.err = residium(cache.xk, intf)
     end

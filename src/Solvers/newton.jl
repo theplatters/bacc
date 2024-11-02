@@ -14,7 +14,7 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 		Inf,
 		intf.prob.∇obj(intf.x0),
 		intf.prob.∇²obj(intf.x0),
-		Inf,
+		norm(intf.prob.∇obj(intf.x0)),
 		0)
 
 	ϕ(α) = intf.prob.obj(cache.xk .+ α * cache.s)
@@ -68,7 +68,7 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 		Inf,
 		g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
 		H(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
-		Inf,
+		norm(intf.prob.∇obj(x0)),
 		used_iter,
 	)
 	ϕ(α) = f(cache.xk + α * cache.s)
@@ -117,8 +117,11 @@ function newton!(
 	guaranteedconvex = true,
 	callback::Union{Nothing, Function} = nothing,
 	error_function = (cache, intf) -> max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk))),
-)
+	)
 	for cache.iter ∈ 1:max_iter
+		if !isnothing(callback)
+			callback(cache, intf)
+		end
 		newton_step!(cache, guaranteedconvex)
 		dϕ₀ = dot(cache.s, cache.dfk)
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
@@ -132,9 +135,6 @@ function newton!(
 		cache.Hfk = H(cache.xk)
 		
 		cache.err = error_function(cache, intf)
-		if !isnothing(callback)
-			callback(cache, intf)
-		end
 		if cache.err <= tol
 			return :converged
 		end
