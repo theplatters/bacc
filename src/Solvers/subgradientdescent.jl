@@ -26,7 +26,7 @@ function subgradientdescent(intf::Interface{UnconstrainedProblem}; linesearch, c
 		
 		cache.fk = intf.prob.obj(cache.xk)
 		cache.dfk = intf.prob.oracle(cache.xk)
-		checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, i, cache.err)
+		checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
 	end
 
 	return Solution(cache.xk, cache.fk, false, intf.max_iter, cache.err)

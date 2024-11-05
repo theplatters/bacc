@@ -4,7 +4,9 @@ using LinearAlgebra
 using GLMakie
 using Random
 using Statistics
+
 include("testfunctions.jl")
+
 struct Params2
 	χ::Float64
 	h::Vector{Float64}
@@ -29,8 +31,8 @@ end
 
 function test_problem(fun, fun_conv, p::Params2)
 
-	max_iter = 10
-	tries = 1000
+	max_iter = 20
+	tries = 100
 	data = [fill(1e-24,max_iter * tries) for _ in 1:5]
 		function calculate_error!(i,j) 
 			function a(cache, _) 
@@ -40,10 +42,12 @@ function test_problem(fun, fun_conv, p::Params2)
 
 
 	for i in 1:tries
-		up = UnconstrainedProblem(p.χ, p.h + 10 * rand(3), p.mₚ, fun)
+		h =  p.h .* ones(3) 
+		up = UnconstrainedProblem(p.χ, h, p.mₚ, fun)
 		ui = Interface(up, p.mₚ + rand(3), max_iter, 1e-24)
-		cp = ConstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
-		ci = Interface(cp, p.h + rand(3), max_iter, 1e-24)
+		cp = ConstrainedProblem(p.χ, h, p.mₚ, fun_conv)
+		ci = Interface(cp, h + rand(3), max_iter, 1e-24)
+
 
 		solve(ui, :semi_smooth_newton, linesearch = BackTracking(), callback = calculate_error!(1,i))
 		solve(ui, :subgradientdescent, linesearch = BackTracking(), callback = calculate_error!(2,i))
@@ -52,25 +56,31 @@ function test_problem(fun, fun_conv, p::Params2)
 		solve(ci, :newton, linesearch = BackTracking(), callback = calculate_error!(4,i))
 		solve(ci, :semi_smooth_newton, linesearch = BackTracking(), callback = calculate_error!(5,i))
 	end
-	avg = [Matrix{Float64}(undef, 10, 10) for i in 1:5]
+	avg = [Matrix{Float64}(undef, max_iter, tries) for i in 1:5]
 	map!(x -> reshape(x,max_iter,:), avg,data)
 	map(x -> vec(mean(x,dims=2)),avg)
 end
 
 mp = zeros(3)
-p = Params2(10,zeros(3),mp)
-
-data1 = test_problem(test_fun_1_builder(60, 80), test_fun_1_conjugate_builder(60, 80), p)
+p = Params2(5,10 * ones(3),mp)
+data1 = test_problem(test_fun_1_builder(100, 60), test_fun_1_conjugate_builder(100, 60), p)
 fig1 = plot_convergencerate(data1)
-save("plots/cr1.png", fig1)
-
-data2 = test_problem(test_fun_2_builder(100, 60), test_fun_2_conjugate_builder(100, 60), p)
+save("plots/cr1_lowh.png", fig1)
+data2 = test_problem(test_fun_2_builder(200, 60), test_fun_2_conjugate_builder(200, 60), p)
 fig2 = plot_convergencerate(data2)
-save("plots/cr2.png", fig2)
+save("plots/cr2_lowh.png", fig2)
+
+p = Params2(10,70 * ones(3),mp)
+data3 = test_problem(test_fun_1_builder(200, 60), test_fun_1_conjugate_builder(200, 60), p)
+fig3 = plot_convergencerate(data3)
+save("plots/cr1_highh.png", fig3)
+data4 = test_problem(test_fun_2_builder(200, 60), test_fun_2_conjugate_builder(200, 60), p)
+fig4 = plot_convergencerate(data4)
+save("plots/cr2_highh.png", fig4)
 
 data3 = [Vector{Float64}(undef, 0) for i in 1:5]
 begin
-	A = 10 * randn(3, 3)
+	A = 20 * randn(3, 3)
 	A = A' * A
 	A = (A + A') / 2
 	b = rand(3)

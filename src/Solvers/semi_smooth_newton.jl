@@ -6,7 +6,7 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
 		zeros(length(intf.x0)),
 		intf.x0,
 		fill(typemax(eltype(intf.x0)), length(intf.x0)),
-		Inf,
+		intf.prob.obj(intf.x0),
 		intf.prob.obj(intf.x0),
 		intf.prob.∇obj(intf.x0),
 		intf.prob.∇²obj(intf.x0),
