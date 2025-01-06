@@ -19,14 +19,9 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
 	ϕdϕ(α) = (ϕ(α), dϕ(α))
 
 	for cache.iter ∈ 1:intf.max_iter	
-
-		if !isnothing(callback)
-			callback(cache, intf)
-		end
-		
 		if cache.xk ≈ intf.prob.mₚ
-            cache.dfk = intf.prob.∇U(cache.xk) - intf.prob.h + ones(length(intf.x0)) / sqrt(length(intf.x0))
-            cache.Hfk = intf.prob.∇²U(cache.xk)
+            cache.dfk = intf.prob.∇U(cache.xk) - intf.prob.h 
+            cache.Hfk = Matrix(I,size(cache.Hfk))
 		else
             cache.dfk = intf.prob.∇obj(cache.xk)
             cache.Hfk = intf.prob.∇²obj(cache.xk)
@@ -39,14 +34,21 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
         α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
         cache.xk += α * cache.s
         
-        checkconvergence!(cache, intf) && return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
+        converged = checkconvergence!(cache, intf) 
+		if !isnothing(callback)
+			callback(cache, intf)
+		end
+		if converged 
+			return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
+		end
 
 	end
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 end
 
 function calculate_error!(cache, intf)
-	if (isapprox(norm(cache.xk[1:end-1] - intf.prob.h) - intf.prob.χ, 0, atol = 1e-8))
+	if (isapprox(norm(cache.xk[1:end-1] - intf.prob.h) - intf.prob.χ, 0, atol = 1e-6))
+		@info "this case"
 		cache.err = boundary_residium(cache.xk[1:end-1], intf)
 	else
 		cache.err = residium(cache.xk[1:end-1], intf)
@@ -87,6 +89,7 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, cal
 	for cache.iter in 1:intf.max_iter
 		
 		if (!isnothing(callback))
+			@info cache.err
 			callback(cache, intf)
 		end
         
@@ -95,12 +98,12 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, cal
 		end
 		newton_step!(cache, false)
 		dϕ₀ = dot(cache.s[1:end-1], cache.dfk[1:end-1])
-		α = 1
-		cache.fk = intf.prob.obj(cache.xk[1:end-1] .+ α * cache.s[1:end-1])
+        
+        α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
 		cache.xk = cache.xk .+ α * cache.s
 		cache.dfk = g(cache.xk)
 		cache.Hfk = G(cache.xk)
-        
+		@info cache.Hfk
         calculate_error!(cache,intf)
 
 	end

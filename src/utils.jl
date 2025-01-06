@@ -14,7 +14,7 @@ function transform_to_radial_2D(x, r, m)
 	return [atan(x[2] - m[2], x[1] - m[1])]
 end
 
-function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
+function choleksyadaption!(A::AbstractMatrix{T}, β = 10e-3, max_iter = 1000)::Nothing where {T <: Real}
 	A = Symmetric(A)
 	if (isposdef(A))
 		return nothing
@@ -37,7 +37,7 @@ function choleksyadaption!(A, β = 10e-3, max_iter = 1000)
 end
 
 
-short_circuit_exit(intf) = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
+short_circuit_exit(intf::Interface)::Bool = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
 
 function checkconvergence!(cache::AbstractCache, intf::Interface)
 	if isapprox(cache.xk, intf.prob.mₚ, atol = 10e-8)
@@ -46,17 +46,21 @@ function checkconvergence!(cache::AbstractCache, intf::Interface)
         cache.err = residium(cache.xk, intf)
     end
     
-	if (cache.err ≤ intf.tol)
-		return true
-	end
-    
-    return false
+	return cache.err ≤ intf.tol
+
 end
 
-residium(xk, intf) = norm(intf.prob.∇obj(xk))
+residium(xk::AbstractArray, intf::Interface)::T where {T <: Real} = norm(intf.prob.∇obj(xk))
 
-function boundary_residium(xk::Vector{T}, intf::Interface)::T where {T <: Real}
-	grad = intf.prob.∇obj(xk)
+function boundary_residium(xk::AbstractArray{T}, intf::Interface)::T where {T <: Real}
+	grad = -intf.prob.∇obj(xk)
 	n = xk - intf.prob.h
+	if dot(grad, n) ≤ 0
+		return norm(grad)
+	end
 	norm(grad - ((grad ⋅ n) / (n ⋅ n)) * n)
+end
+
+function Base.:-(::Nothing, a::Vector{Float64})::Vector{Float64}
+  fill(Inf, length(a))
 end

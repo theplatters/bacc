@@ -119,9 +119,6 @@ function newton!(
 	error_function = (cache, intf) -> max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk))),
 	)
 	for cache.iter ∈ 1:max_iter
-		if !isnothing(callback)
-			callback(cache, intf)
-		end
 		newton_step!(cache, guaranteedconvex)
 		dϕ₀ = dot(cache.s, cache.dfk)
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
@@ -135,6 +132,9 @@ function newton!(
 		cache.Hfk = H(cache.xk)
 		
 		cache.err = error_function(cache, intf)
+		if !isnothing(callback)
+			callback(cache, intf)
+		end
 		if cache.err <= tol
 			return :converged
 		end
@@ -142,8 +142,6 @@ function newton!(
 
 	return :diverged
 end
-
-
 
 function newton_step!(cache::AbstractCache, guaranteedconvex = true)
 	cache.xold = copy(cache.xk)

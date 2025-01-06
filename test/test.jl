@@ -16,7 +16,7 @@ end
 
 function test_problem(fun, fun_conv, p::Params2)
 	up = UnconstrainedProblem(p.χ, p.h, p.mₚ, fun)
-	ui = Interface(up, p.mₚ, 100000, 1e-8)
+	ui = Interface(up, p.mₚ, 100, 1e-8)
 	cp = ConstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
 	ci = Interface(cp, p.h, 100, 1e-8)
 
