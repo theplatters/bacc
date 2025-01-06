@@ -27,7 +27,7 @@ function plot_convergencerate(data)
   axislegend(ax2, "Methods", position=:lb)
   fig
 end
-import Base
+
 function test_problem(fun, fun_conv, p::Params2)
 
   max_iter = 10
@@ -48,11 +48,11 @@ function test_problem(fun, fun_conv, p::Params2)
   data[1:3,1] .=  norm(up.oracle(p.mₚ))
   data[4:5,1] .=  norm(cp.∇obj(p.h))
 
-  @info solve(ui, :semi_smooth_newton, linesearch=MoreThuente(), callback=calculate_error!(1))
-  @info sol = solve(ui, :subgradientdescent, linesearch=MoreThuente(), callback=calculate_error!(2))
-  @info sol = solve(ui, :proximal_gradient, linesearch=MoreThuente(), callback=calculate_error!(3))
-  @info solve(ci, :newton, linesearch=MoreThuente(), callback=calculate_error!(4))
-  @info solve(ci, :semi_smooth_newton, linesearch=MoreThuente(), callback=calculate_error!(5))
+  @info solve(ui, :semi_smooth_newton, linesearch=WolfePowell(), callback=calculate_error!(1))
+  @info sol = solve(ui, :subgradientdescent, linesearch=WolfePowell(), callback=calculate_error!(2))
+  @info sol = solve(ui, :proximal_gradient, linesearch=WolfePowell(), callback=calculate_error!(3))
+  @info solve(ci, :newton, linesearch=WolfePowell(), callback=calculate_error!(4))
+  @info solve(ci, :semi_smooth_newton, linesearch=Static(), callback=calculate_error!(5))
   data
 end
 mp = 1 * ones(3)
@@ -91,24 +91,26 @@ save("plots/cr_quadr.png", fig5)
 #===========================================#
 #Hysteresis currve
 
+#Custom LineSearche
+
 ms = 1.23 * 10^6
-Man(h) = 2 *  ms / pi * atan(norm(h)/38)
-hs = [[600*sin(t),0] for t in range(0,2*π,1000)]
-sol_prev = [0.0,0.0]
-sols = zeros(length(hs) +1 ,2)
+A = 38
+Man(h) = 2 *  ms / pi * atan(norm(h)/A)
+hs = [[180*sin(t),0] for t in range(0,2*π,2000)]
+sol_prev = [0.000001,0.0]
+sols = zeros(length(hs) ,2)
 for (i,h) in enumerate(hs)
   p = Params2(71,h,sol_prev)
-  up = ConstrainedProblem(p.χ, h, p.mₚ, test_fun_1_conjugate_builder(ms, 38))
-  ui = Interface(up, p.mₚ + [0.1,0.0], 10, 1e-12)
-  sol = solve(ui, :semi_smooth_newton, linesearch=BackTracking())
-  sol_prev = sol.sol
-  @info sol
-  sols[i,:] .= Man(sol.sol) * sol.sol/norm(sol.sol)
+  problem = ConstrainedProblem(p.χ, h, p.mₚ,test_fun_2_builder(ms, A))
+  interface = Interface(problem, h, 20, 1e-12)
+  sol = solve(interface, :semi_smooth_newton, linesearch=WolfePowell())
+  sol_prev = Man(sol.sol) * sol.sol/norm(sol.sol)
+  sols[i,:] .= sol_prev
 end
 
 
 f = Figure()
 ax = Axis(f[1, 1])
-lines!(ax,stack(hs)[1,:],sols[2:end,1])
+lines!(ax,stack(hs)[1,:],sols[1:end,1])
 
 f

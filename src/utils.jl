@@ -56,6 +56,7 @@ function boundary_residium(xk::AbstractArray{T}, intf::Interface)::T where {T <:
 	grad = -intf.prob.∇obj(xk)
 	n = xk - intf.prob.h
 	if dot(grad, n) ≤ 0
+		@info "Normal vector pointing inside interior"
 		return norm(grad)
 	end
 	norm(grad - ((grad ⋅ n) / (n ⋅ n)) * n)

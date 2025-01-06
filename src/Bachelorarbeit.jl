@@ -9,6 +9,8 @@ export UnconstrainedProblem,
     transform_to_euklidean_3D, 
     transform_to_radial_3D,
     transform_to_euklidean_2D, 
-    transform_to_radial_2D 
+    transform_to_radial_2D,
+    WolfePowell
 include("solvers.jl")
+include("WolfePowell.jl")
 end # module Bachelorarbeit
