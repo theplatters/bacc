@@ -15,16 +15,16 @@ end
 
 function plot_convergencerate(data)
   fig = Figure(size=(1980, 1020))
-  ax1 = Axis(fig[1, 1],  xticks=1:maximum(length.(data)))
-  ax2 = Axis(fig[1, 2],  xticks=1:maximum(length.(data)))
+  ax1 = Axis(fig[1, 1], xticks=1:maximum(size(data)))
+  ax2 = Axis(fig[1, 2],  xticks=1:maximum(size(data)))
   for (l,d) in zip(["Semi-smooth Newton (unconstrained)", "Subgradient descent", "Proximal gradient"],eachrow(data[1:3,:]))
     lines!(ax1, d[d .!= -Inf], label=l)
   end
   for (l,d) in zip(["Newton", "Semi-smooth Newton (constrained)"],eachrow(data[4:5,:]))
-    lines!(ax2, d[d .!= -Inf], label=l)
+    lines!(ax2,1:length(d[d .!= -Inf]), d[d .!= -Inf], label=l)
   end
-  axislegend(ax1, "Methods", position=:lb)
-  axislegend(ax2, "Methods", position=:lb)
+  axislegend(ax1, "Methods", position=:lt)
+  axislegend(ax2, "Methods", position=:lt)
   fig
 end
 
@@ -63,26 +63,24 @@ data2 = test_problem(test_fun_2_builder(200, 60), test_fun_2_conjugate_builder(2
 fig2 = plot_convergencerate(data2)
 
 
-mp = 10 * ones(3)
-p = Params2(50, 100 * ones(3), zeros(3))
-data3 = test_problem(test_fun_1_builder(400, 60), test_fun_1_conjugate_builder(400, 60), p)
+mp = 1e6 * ones(3)
+p = Params2(70, 600 * ones(3), zeros(3))
+data3 = test_problem(test_fun_1_builder(1.23e6, 38), test_fun_1_conjugate_builder(1.23e6, 38), p)
 fig3 = plot_convergencerate(data3)
-data4 = test_problem(test_fun_2_builder(400, 60), test_fun_2_conjugate_builder(400, 60), p)
+data4 = test_problem(test_fun_2_builder(1.23e6, 38), test_fun_2_conjugate_builder(1.23e6, 38), p)
 fig4 = plot_convergencerate(data4)
 
-p = Params2(10, 10 * ones(3), zeros(3))
+p = Params2(70, 10 * ones(3), zeros(3))
 data3 = [Vector{Float64}(undef, 0) for i in 1:5]
 begin
-  Q = 10 * rand(3, 3)
-  A = Q * Diagonal([10.0, 1.0, 14.0]) * Q'
-  b = 10 * rand(3)
-  c = 5
-  data3 = test_problem(quadratic_builder(A, b, c), quadratic_conjugate_builder(A, b, c), p)
+  A = Matrix(I,(3,3))
+  b = 100 * ones(3)
+  c = 0
+  data3 = test_problem(quadratic_builder(A, b, c), quadratic_builder(A, b, c), p)
 end
 
 fig5 = plot_convergencerate(data3)
 
-save("plots/cr1_lowh.png", fig1)
 save("plots/cr2_lowh.png", fig2)
 save("plots/cr1_highh.png", fig3)
 save("plots/cr2_highh.png", fig4)
@@ -96,13 +94,13 @@ save("plots/cr_quadr.png", fig5)
 ms = 1.23 * 10^6
 A = 38
 Man(h) = 2 *  ms / pi * atan(norm(h)/A)
-hs = [[180*sin(t),0] for t in range(0,2*π,2000)]
-sol_prev = [0.000001,0.0]
+hs = [[180*sin(t),0.0] for t in range(0,2*π,200)]
+sol_prev = [00.0,0.0]
 sols = zeros(length(hs) ,2)
 for (i,h) in enumerate(hs)
   p = Params2(71,h,sol_prev)
   problem = ConstrainedProblem(p.χ, h, p.mₚ,test_fun_2_builder(ms, A))
-  interface = Interface(problem, h, 20, 1e-12)
+  interface = Interface(problem, h + rand(2), 30, 1e-10)
   sol = solve(interface, :semi_smooth_newton, linesearch=WolfePowell())
   sol_prev = Man(sol.sol) * sol.sol/norm(sol.sol)
   sols[i,:] .= sol_prev
@@ -110,7 +108,9 @@ end
 
 
 f = Figure()
+
 ax = Axis(f[1, 1])
 lines!(ax,stack(hs)[1,:],sols[1:end,1])
 
 f
+save("plots/hysteresis_curve.png",f)

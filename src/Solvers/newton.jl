@@ -122,12 +122,11 @@ function newton!(
 		newton_step!(cache, guaranteedconvex)
 		dϕ₀ = dot(cache.s, cache.dfk)
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-		
 		cache.xk += α * cache.s
 		if interior_violated(cache.xk)
 			return :outside
 		end
-		
+
 		cache.dfk = g(cache.xk)
 		cache.Hfk = H(cache.xk)
 		

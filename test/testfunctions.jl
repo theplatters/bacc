@@ -1,9 +1,9 @@
 using LinearAlgebra
-function quadratic_builder(A::Matrix, b::Vector, c::Real)
+function quadratic_builder(A::AbstractMatrix, b::AbstractVector, c::Real)
 	return x -> 0.5 * x' * A * x + b' * x + c
 end
 
-function quadratic_conjugate_builder(A::Matrix, b::Vector, c::Real)
+function quadratic_conjugate_builder(A::AbstractMatrix, b::AbstractVector, c::Real)
 	return x -> 0.5 * (x - b)' * inv(A) * (x - b) - c
 end
 

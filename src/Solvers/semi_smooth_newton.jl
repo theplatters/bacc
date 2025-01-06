@@ -46,14 +46,18 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
 	return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 end
 
-function calculate_error!(cache, intf)
+#= function calculate_error!(cache, intf)
 	if (isapprox(norm(cache.xk[1:end-1] - intf.prob.h) - intf.prob.χ, 0.0, atol = 1e-8))
-		@info "this case"
 		cache.err = boundary_residium(cache.xk[1:end-1], intf)
 	else
 		cache.err = residium(cache.xk[1:end-1], intf)
 	end
     nothing
+end =#
+
+function calculate_error!(cache,intf)
+	cache.err = norm(cache.dfk)
+	nothing
 end
 
 function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, callback)
@@ -99,7 +103,7 @@ function semi_smooth_newton(intf::Interface{ConstrainedProblem}; linesearch, cal
 		dϕ₀ = dot(cache.s[1:end-1], cache.dfk[1:end-1])
         
         α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
-		@info α
+		#@info α
 		cache.xk = cache.xk .+ α * cache.s
 		cache.dfk = g(cache.xk)
 		cache.Hfk = G(cache.xk)
