@@ -43,7 +43,7 @@ function checkconvergence!(cache::AbstractCache, intf::Interface)
 	if isapprox(cache.xk, intf.prob.mₚ, atol = 10e-8)
 		cache.err = norm(cache.s)
     else
-        cache.err = residium(cache.xk, intf)
+        cache.err = residium(cache.xk, intf) 
     end
     
 	return cache.err ≤ intf.tol

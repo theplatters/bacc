@@ -17,3 +17,4 @@ struct Solution
     iter::Int64
     err::Float64
 end
+
