@@ -81,6 +81,8 @@ end
 
 fig5 = plot_convergencerate(data3)
 
+
+save("plots/cr1_lowh.png", fig1)
 save("plots/cr2_lowh.png", fig2)
 save("plots/cr1_highh.png", fig3)
 save("plots/cr2_highh.png", fig4)
