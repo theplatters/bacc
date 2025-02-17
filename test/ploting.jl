@@ -15,8 +15,8 @@ end
 
 function plot_convergencerate(data)
 	fig = Figure(size = (1980, 1020))
-	ax1 = Axis(fig[1, 1], xticks = 1:maximum(size(data)), xlabel = "Iterations", ylabel = "Error")
-	ax2 = Axis(fig[1, 2], xticks = 1:maximum(size(data)), xlabel = "Iterations", ylabel = "Error")
+	ax1 = Axis(fig[1, 1], xticks = 1:maximum(size(data)), xlabel = "Iterations", ylabel = "Error", yscale = log10)
+	ax2 = Axis(fig[1, 2], xticks = 1:maximum(size(data)), xlabel = "Iterations", ylabel = "Error", yscale = log10)
 	for (l, d) in zip(["Semi-smooth Newton (unconstrained)", "Subgradient descent", "Proximal gradient"], eachrow(data[1:3, :]))
 		lines!(ax1, d[d.!=-Inf], label = l)
 	end
@@ -30,8 +30,8 @@ end
 
 function test_problem(fun, fun_conv, p::Params2)
 
-	max_iter = 10
-	data = fill(-Inf, 5, max_iter + 1)
+	max_iter = 12
+	data = fill(eps(Float64), 5, max_iter + 1)
 	function calculate_error!(i)
 		function a(cache, _)
 			data[i, 1+cache.iter] = cache.err
@@ -47,12 +47,12 @@ function test_problem(fun, fun_conv, p::Params2)
 
 	data[1:3, 1] .= norm(up.oracle(p.mₚ))
 	data[4:5, 1] .= norm(cp.∇obj(p.h))
-
 	@info solve(ui, :semi_smooth_newton, linesearch = WolfePowell(), callback = calculate_error!(1))
-	@info sol = solve(ui, :subgradientdescent, linesearch = WolfePowell(), callback = calculate_error!(2))
+	@info sol = solve(ui, :subgradientdescent, linesearch = BackTracking(), callback = calculate_error!(2))
 	@info sol = solve(ui, :proximal_gradient, linesearch = WolfePowell(), callback = calculate_error!(3))
 	@info solve(ci, :newton, linesearch = WolfePowell(), callback = calculate_error!(4))
 	@info solve(ci, :semi_smooth_newton, linesearch = Static(), callback = calculate_error!(5))
+	replace!(data, 0.0 => eps(Float64))
 	data
 end
 mp = 1 * ones(3)
@@ -104,9 +104,9 @@ ax = Axis(f[1, 1], xlabel = L"h_x", ylabel = L"m_x")
 mp = [0.0, 0.0]
 sol_prev = [0.0, 0.0]
 sols = zeros(1000, 2)
-for (amount, x) in Iterators.product([600, 180], ["first", "second"])
+for amount in [600, 180]
 
-	hs = [[amount * sin(t), 0.0] for t in range(0, 2 * π, 1000)]
+	hs = [[amount * sin(t), 0.0] for t in range(0, 4 * π, 1000)]
 	for (i, h) in enumerate(hs)
 		p = Params2(71, h, mp)
 		problem = ConstrainedProblem(p.χ, h, p.mₚ, test_fun_2_conjugate_builder(ms, A))
@@ -119,12 +119,10 @@ for (amount, x) in Iterators.product([600, 180], ["first", "second"])
 		sols[i, :] .= mp
 	end
 
-	if x == "first"
-		lines!(ax, stack(hs)[1, :], sols[1:end, 1], linestyle = :dash, color = amount == 180 ? :red : :blue)
-	else
-		lines!(ax, stack(hs)[1, :], sols[1:end, 1], color = amount == 180 ? :red : :blue)
-	end
+	lines!(ax, stack(hs)[1, :], sols[1:end, 1], linestyle = amount == 180 ? :dash : :solid, color = amount == 180 ? :red : :blue ,label = amount == 180 ? L"180 A/m" : L"600 A/m")
+
 end
+axislegend(ax, position = :rt)
 f
 save("plots/hysteresis_curve.png", f)
 
@@ -134,8 +132,9 @@ ax = Axis(f[1, 1], xlabel = L"h_x", ylabel = L"m_x")
 mp = [0.0, 0.0]
 sol_prev = [0.0, 0.0]
 sols = zeros(1000, 2)
-for (amount, x) in Iterators.product([600, 180], ["first", "second"])
-	hs = [[amount * sin(t), 0.0] for t in range(0, 2 * π, 1000)]
+for amount in [600, 180]
+
+	hs = [[amount * sin(t), 0.0] for t in range(0, 4 * π, 1000)]
 	for (i, h) in enumerate(hs)
 		p = Params2(71, h, mp)
 		problem = UnconstrainedProblem(p.χ, h, p.mₚ, test_fun_2_builder(ms, A))
@@ -143,16 +142,53 @@ for (amount, x) in Iterators.product([600, 180], ["first", "second"])
 		sol = solve(interface, :semi_smooth_newton, linesearch = WolfePowell())
 		mp = sol.sol
 		sols[i, :] .= mp
+
 	end
 
+	lines!(ax, stack(hs)[1, :], sols[1:end, 1], linestyle = amount == 180 ? :dash : :solid, color = amount == 180 ? :red : :blue ,label = amount == 180 ? L"180 A/m" : L"600 A/m")
 
-	if x == "first"
-		lines!(ax, stack(hs)[1, :], sols[1:end, 1], linestyle = :dash, color = amount == 180 ? :red : :blue)
-	else
-		lines!(ax, stack(hs)[1, :], sols[1:end, 1], color = amount == 180 ? :red : :blue)
-	end
 end
+axislegend(ax, position = :rt)
 
 f
-save("plots/hysteresis_curve_dual.png", f)
+
+#dual 
+f = Figure()
+ax = Axis(f[1, 1], xlabel = L"m_x", ylabel = L"m_y")
+mp = [0.0, 0.0]
+sol_prev = [0.0, 0.0]
+sols = zeros(1000, 2)
+Hm(t) = 110 * min(t / (6 * pi), 1)
+hs = [Hm(t) * [cos(t), sin(t)] for t in range(0.5, 8 * π, 1000)]
+for (i, h) in enumerate(hs)
+	p = Params2(71, h, mp)
+	problem = UnconstrainedProblem(p.χ, h, p.mₚ, test_fun_2_builder(ms, A))
+	interface = Interface(problem, mp + [0.001, 1e-10], 10, 1e-14)
+	sol = solve(interface, :semi_smooth_newton, linesearch = WolfePowell())
+	mp = sol.sol
+	sols[i, :] .= mp
+end
+lines!(ax, sols[1:end, 1], sols[1:end, 2], linestyle = :dash)
+
+f
+f = Figure()
+ax = Axis(f[1, 1], xlabel = L"m_x", ylabel = L"m_y")
+mp = [0.0, 0.0]
+sol_prev = [0.0, 0.0]
+sols = zeros(1000, 2)
+Hm(t) = 110 * min(t / (6 * pi), 1)
+hs = [Hm(t) * [cos(t), sin(t)] for t in range(0, 8 * π, 1000)]
+for (i, h) in enumerate(hs)
+	p = Params2(71, h, mp)
+	problem = UnconstrainedProblem(p.χ, h, p.mₚ, test_fun_2_builder(ms, A))
+	interface = Interface(problem, mp + [0.001, 1e-10], 10, 1e-14)
+	sol = solve(interface, :semi_smooth_newton, linesearch = WolfePowell())
+	mp = sol.sol
+	sols[i, :] .= mp
+end
+lines!(ax, sols[1:end, 1], sols[1:end, 2], linestyle = :dash)
+
+f
+save("plots/hysteresis_curve_2d_dual.png", f)
+
 

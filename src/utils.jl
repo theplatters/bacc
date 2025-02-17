@@ -40,17 +40,14 @@ end
 short_circuit_exit(intf::Interface)::Bool = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
 
 function checkconvergence!(cache::AbstractCache, intf::Interface)
-	if isapprox(cache.xk, intf.prob.mₚ, atol = 10e-8)
-		cache.err = norm(cache.s)
-    else
-        cache.err = residium(cache.xk, intf) 
-    end
+	cache.err = norm(cache.xk - cache.xold)
     
 	return cache.err ≤ intf.tol
 
 end
 
-residium(xk::AbstractArray, intf::Interface)::T where {T <: Real} = norm(intf.prob.∇obj(xk))
+residium(xk::AbstractArray, intf::Interface)::T where {T <: Real} = norm(cache.xk - cache.xold) 
+
 
 function boundary_residium(xk::AbstractArray{T}, intf::Interface)::T where {T <: Real}
 	grad = -intf.prob.∇obj(xk)

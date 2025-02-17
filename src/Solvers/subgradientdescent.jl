@@ -3,6 +3,7 @@ function subgradientdescent(intf::Interface{UnconstrainedProblem}; linesearch, c
 	cache = Cache(
 		zeros(length(intf.x0)),
 		intf.x0,
+		fill(Inf, length(intf.x0)),
 		intf.prob.obj(intf.x0),
 		intf.prob.oracle(intf.x0),
 		norm(intf.prob.oracle(intf.x0)),
@@ -19,6 +20,7 @@ function subgradientdescent(intf::Interface{UnconstrainedProblem}; linesearch, c
 		cache.s = -cache.dfk
 		
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dot(cache.dfk, cache.s))
+		cache.xold .= cache.xk
 		cache.xk += α * cache.s
 		
 		cache.fk = intf.prob.obj(cache.xk)

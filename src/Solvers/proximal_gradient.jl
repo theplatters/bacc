@@ -23,6 +23,7 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem}; callback)
 	cache = ProxGradCache(
 		zeros(length(intf.x0)),
 		copy(intf.x0),
+		fill(Inf, length(intf.x0)),
 		f(intf.x0, intf),
 		∇f(intf.x0, intf),
 		T(Lk, intf.x0, ∇f(intf.x0, intf), intf.prob.χ, intf.prob.mₚ),
@@ -35,7 +36,10 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem}; callback)
 			Lk *= η
 			T!(cache.Tk, Lk, cache.xk, cache.dfk, intf.prob.χ, intf.prob.mₚ)
 		end
-		cache.xk = copy(cache.Tk)
+		cache.xold .= cache.xk
+		cache.xk .= cache.Tk
+
+
 		cache.fk = f(cache.xk, intf)
 		cache.dfk = ∇f(cache.xk, intf)
 		converged = checkconvergence!(cache, intf)  

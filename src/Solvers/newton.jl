@@ -76,9 +76,9 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 	ϕdϕ(α) = (ϕ(α), dϕ(α))
 
 	if length(cache.xk) == 1
-		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_2D(cache.xk, intf.prob.χ, intf.prob.h), intf)
+		err_fun = (cache, intf) -> norm(cache.xk - cache.xold) 
 	else
-		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_3D(cache.xk, intf.prob.χ, intf.prob.h), intf)
+		err_fun = (cache, intf) -> norm(cache.xk - cache.xold) 
 	end
 
 	state = newton!(

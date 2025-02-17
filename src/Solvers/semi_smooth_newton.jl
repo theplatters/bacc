@@ -32,6 +32,7 @@ function semi_smooth_newton(intf::Interface{UnconstrainedProblem}; linesearch, c
         dϕ₀ = dot(cache.s, cache.dfk)
         
         α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
+		cache.xold .= cache.xk
         cache.xk += α * cache.s
         
         converged = checkconvergence!(cache, intf) 

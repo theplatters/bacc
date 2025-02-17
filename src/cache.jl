@@ -3,6 +3,7 @@ abstract type AbstractCache end
 mutable struct Cache <: AbstractCache
     s::Vector{Float64}
     xk::Vector{Float64}
+    xold::Vector{Float64}
     fk::Float64
     dfk::Vector{Float64}
     err::Float64
@@ -11,6 +12,7 @@ end
 mutable struct ProxGradCache <: AbstractCache
     s::Vector{Float64}
     xk::Vector{Float64}
+    xold::Vector{Float64}
     fk::Float64
     dfk::Vector{Float64}
     Tk::Vector{Float64}
