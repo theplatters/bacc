@@ -168,16 +168,18 @@ for (i, h) in enumerate(hs)
 	mp = sol.sol
 	sols[i, :] .= mp
 end
-lines!(ax, sols[1:end, 1], sols[1:end, 2], linestyle = :dash)
+lines!(ax, sols[1:end, 1], sols[1:end, 2])
 
 f
+
+save("plots/hysteresis_curve_2d.png", f)
 f = Figure()
 ax = Axis(f[1, 1], xlabel = L"m_x", ylabel = L"m_y")
 mp = [0.0, 0.0]
 sol_prev = [0.0, 0.0]
 sols = zeros(1000, 2)
 Hm(t) = 110 * min(t / (6 * pi), 1)
-hs = [Hm(t) * [cos(t), sin(t)] for t in range(0, 8 * π, 1000)]
+hs = [Hm(t) * [cos(t), sin(t)] for t in range(0.01, 8 * π, 1000)]
 for (i, h) in enumerate(hs)
 	p = Params2(71, h, mp)
 	problem = UnconstrainedProblem(p.χ, h, p.mₚ, test_fun_2_builder(ms, A))
@@ -186,7 +188,7 @@ for (i, h) in enumerate(hs)
 	mp = sol.sol
 	sols[i, :] .= mp
 end
-lines!(ax, sols[1:end, 1], sols[1:end, 2], linestyle = :dash)
+lines!(ax, sols[1:end, 1], sols[1:end, 2])
 
 f
 save("plots/hysteresis_curve_2d_dual.png", f)
