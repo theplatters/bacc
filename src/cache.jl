@@ -14,6 +14,7 @@ mutable struct ProxGradCache <: AbstractCache
     xk::Vector{Float64}
     xold::Vector{Float64}
     fk::Float64
+    gk::Float64
     dfk::Vector{Float64}
     Tk::Vector{Float64}
     err::Float64

@@ -46,7 +46,7 @@ function checkconvergence!(cache::AbstractCache, intf::Interface)
 
 end
 
-residium(xk::AbstractArray, intf::Interface)::T where {T <: Real} = norm(cache.xk - cache.xold) 
+residium(cache::AbstractCache, intf::Interface)::T where {T <: Real} = norm(cache.dfk) 
 
 
 function boundary_residium(xk::AbstractArray{T}, intf::Interface)::T where {T <: Real}

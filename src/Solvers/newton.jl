@@ -15,7 +15,7 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 		intf.prob.∇obj(intf.x0),
 		intf.prob.∇²obj(intf.x0),
 		norm(intf.prob.∇obj(intf.x0)),
-		0)
+		1)
 
 	ϕ(α) = intf.prob.obj(cache.xk .+ α * cache.s)
 	dϕ(α) = intf.prob.∇obj(cache.xk .+ α * cache.s) ⋅ cache.s
@@ -35,14 +35,15 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 		intf.tol,
 		interior_violated = x -> norm(x - intf.prob.h) > intf.prob.χ,
 		callback = callback,
-		error_function = (cache,intf) -> residium(cache.xk,intf))
+		error_function = (cache,intf) -> residium(cache,intf))
 
 	if state == :converged
 		return Solution(cache.xk, cache.fk, true, cache.iter, cache.err)
 	elseif state == :diverged
 		return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 	else
-		x0 = (intf.prob.χ / norm(cache.xk) * cache.xk) + intf.prob.h
+		x0 = intf.prob.h + (intf.prob.χ / norm(cache.xk - intf.prob.h) * (cache.xk - intf.prob.h))
+		@info norm(x0 - intf.prob.h) 
 		if length(cache.xk) == 2
 			return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D, cache.iter, callback = callback)
 		elseif length(cache.xk) == 3
@@ -69,16 +70,16 @@ function newton_on_ball(intf::Interface, linesearch, x0, transform, inverse_tran
 		g(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
 		H(inverse_transform(x0, intf.prob.χ, intf.prob.h)),
 		norm(intf.prob.∇obj(x0)),
-		used_iter,
+		used_iter + 1,
 	)
 	ϕ(α) = f(cache.xk + α * cache.s)
 	dϕ(α) = g(cache.xk .+ α * cache.s) ⋅ cache.s
 	ϕdϕ(α) = (ϕ(α), dϕ(α))
 
 	if length(cache.xk) == 1
-		err_fun = (cache, intf) -> norm(cache.xk - cache.xold) 
+		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_2D(cache.xk, intf.prob.χ, intf.prob.h), intf)
 	else
-		err_fun = (cache, intf) -> norm(cache.xk - cache.xold) 
+		err_fun = (cache, intf) -> boundary_residium(transform_to_euklidean_3D(cache.xk, intf.prob.χ, intf.prob.h), intf)
 	end
 
 	state = newton!(
@@ -116,26 +117,32 @@ function newton!(
 	interior_violated = (x -> false),
 	guaranteedconvex = true,
 	callback::Union{Nothing, Function} = nothing,
-	error_function = (cache, intf) -> max(abs(cache.fk - cache.fold), maximum(abs.(cache.dfk))),
+	error_function = (cache, intf) -> maximum(abs.(cache.dfk)),
 	)
-	for cache.iter ∈ 1:max_iter
+	@info cache.iter
+	used_iter = copy(cache.iter)
+	for cache.iter ∈ used_iter:max_iter
 		newton_step!(cache, guaranteedconvex)
 		dϕ₀ = dot(cache.s, cache.dfk)
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dϕ₀)
 		cache.xk += α * cache.s
-		if interior_violated(cache.xk)
-			return :outside
-		end
 
 		cache.dfk = g(cache.xk)
 		cache.Hfk = H(cache.xk)
 		
 		cache.err = error_function(cache, intf)
 		if !isnothing(callback)
+			@info "calling callback", cache.iter
 			callback(cache, intf)
 		end
+
+		if interior_violated(cache.xk)
+			@info "Projecting onto the circle"
+			return :outside
+		else 
 		if cache.err <= tol
-			return :converged
+				return :converged
+			end
 		end
 	end
 
