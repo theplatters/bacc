@@ -7,8 +7,8 @@ struct ConstrainedProblem
 	∇²obj::Function
 
 	S::Function
-	∂S::Function
-	∂²S::Function
+	∇S::Function
+	∇²S::Function
 
 end
 
@@ -39,8 +39,8 @@ struct UnconstrainedProblem
 	∇²obj::Function
 
 	U::Function
-	∂U::Function
-	∂²U::Function
+	∇U::Function
+	∇²U::Function
 
     oracle::Function
 end
@@ -62,8 +62,7 @@ function UnconstrainedProblem(χ, h, mₚ, U; kwags...)
 	obj(m) = U(m) - h ⋅ m + χ * norm(m - mₚ)
 	∇obj(m) = jac(m) - h + χ / norm(m - mₚ) * (m - mₚ)
 	∇²obj(m) = hes(m) + χ * Zygote.hessian(x -> norm(x - mₚ), m)
-
-    oracle(m) = all(abs.(m - mₚ) .> 1e-12) ? ∇obj(m) : ∇diffPart(m) + χ * mₚ
+    oracle(m) = norm(m - mₚ) >= 1e-10 ? ∇obj(m) : ∇diffPart(m)
 
 	UnconstrainedProblem(χ, h, mₚ, obj, ∇obj, ∇²obj, U, jac, hes, oracle)
 

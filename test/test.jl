@@ -1,47 +1,62 @@
-using BenchmarkTools, Plots, Profile, Zygote, LinearAlgebra, LineSearches
+using Test
 using Bachelorarbeit
-plotlyjs()
-function ls(ϕ, dϕ, ϕdϕ, α, fk, dϕ₀)
-	i = 0
-	while ϕ(α) - fk ≤ 0.5 * α * dϕ₀
-		i += 1
-		if (i > 10.000)
-			throw(error("Maximum Iteration reached"))
-		end
-		α = α * 0.99
-	end
-	α, ϕ(α)
+using LinearAlgebra
+
+## Assert, that functions are really convex conjugates
+include("testfunctions.jl")
+
+
+
+
+struct Params2
+    χ::Float64
+    h::Vector{Float64}
+    mₚ::Vector{Float64}
 end
 
-χ = 5e1;
-mₚ = [1.0, -30.0, 3.03];
-A = diagm([5.0, 2.0, 1]);
-b = h = [10.0, 52.0, 3.0];
-a = 10
-m = 1e10
+function test_problem(fun, fun_conv, p::Params2)
+	up = UnconstrainedProblem(p.χ, p.h, p.mₚ, fun)
+	ui = Interface(up, p.mₚ, 100, 1e-8)
+	cp = ConstrainedProblem(p.χ, p.h, p.mₚ, fun_conv)
+	ci = Interface(cp, p.h, 100, 1e-8)
 
-S(u) = u' * A * u + b' * u
-#S(u) = 2 / π * m * norm(u) * atan(norm(u) / a) + 1 / 2 * log(a^2 + norm(u)^2)
-#S(u) = log(exp(u[1])+ exp(u[2]) + 1)
 
-prob = ConstrainedProblem(χ, h, mₚ, S)
-intf = Interface(prob, ones(3), 200, 10e-8)
+	uc = solve(ci, :semi_smooth_newton, linesearch = BackTracking()).sol 
+    uuc = solve(ui, :semi_smooth_newton, linesearch = BackTracking()).sol
+    norm(cp.∇S(uc) - uuc) ≤ 1e-9 && norm(up.∇U(uuc) - uc) ≤ 1e-9
+end
+@testset "convex_conjugates" begin
+    us = rand(3, 100)
+    a = 60
+    m = 80
+    χ = 16
+    h = 10 * ones(3)
+    mp = [0.1,0.2,0.01] 
+    @testset "Fun1" begin 
+        cp = ConstrainedProblem(χ, h, mp, test_fun_1_builder(m, a))
+        up = UnconstrainedProblem(χ, h, mp, test_fun_1_conjugate_builder(m, a))
+        @test all(norm.([cp.∇S(up.∇U(u)) - u for u in eachcol(us)]) .≤ 1e-9)
+    end
+    @testset "Fun2" begin 
+        cp = ConstrainedProblem(χ, h, mp, test_fun_2_builder(m, a))
+        up = UnconstrainedProblem(χ, h, mp, test_fun_2_conjugate_builder(m, a))
+        @test all(norm.([cp.∇S(up.∇U(u)) - u for u in eachcol(us)]) .≤ 1e-9)
+    end   
+    @testset "Quadr" begin 
+        A = randn(3,3); A = A'*A; A = (A + A')/2
+        b = rand(3)
+        c = 5
+        cp = ConstrainedProblem(χ, h, mp, quadratic_builder(A,b,c))
+        up = UnconstrainedProblem(χ, h, mp, quadratic_conjugate_builder(A,b,c))
+        @test all(norm.([cp.∇S(up.∇U(u)) - u for u in eachcol(us)]) .≤ 1e-9)
+    end
+end
 
-sol1 = solve(intf, :semi_smooth_newton, linesearch = StrongWolfe())
+@testset "convex_conjugate_solutions" begin
+   @test test_problem(test_fun_1_builder(80, 60), test_fun_1_conjugate_builder(80, 60), Params2(16, 10 * ones(3), [0.1, 0.01, 0.2])) 
+   @test test_problem(test_fun_2_builder(80, 60), test_fun_2_conjugate_builder(80, 60), Params2(16, 10 * ones(3), [0.1, 0.01, 0.2])) 
 
-sol2 = solve(intf, :newton, linesearch=HagerZhang())
-sol3 = solve(intf, :newton, linesearch = StrongWolfe())
-#sol4 = solve(intf, :newton, linesearch=ls)
-@benchmark (
-	intf = Interface(prob, ones(3) + rand(3), 1000, 10e-8),
-	sol5 = solve(intf, :semi_smooth_newton, linesearch = StrongWolfe()),
-)
-
-sol1.sol - sol3.sol
-
-ones(3) - h |> norm
-
-@profview [solve(intf, :subgradientdescent, linesearch = StrongWolfe()) for i in 1:100]
-
-surface(LinRange(-π, π, 100), LinRange(-π, π, 100), (x, y) -> intf.prob.obj(transform_to_euklidean_3D([x, y], χ, h)))
-
+   @test test_problem(test_fun_1_builder(80, 60), test_fun_1_conjugate_builder(80, 60), Params2(16, 1 * ones(3), [0.1, 0.01, 0.2])) 
+   @test test_problem(test_fun_2_builder(80, 60), test_fun_2_conjugate_builder(80, 60), Params2(16, 1 * ones(3), [0.1, 0.01, 0.2])) 
+   
+end
