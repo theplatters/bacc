@@ -1,4 +1,5 @@
 include("interface.jl")
+
 function transform_to_euklidean_3D(w, r, m)
 	m + [r * sin(w[1]) * cos(w[2]), r * sin(w[1]) * sin(w[2]), r * cos(w[1])]
 end
@@ -40,7 +41,7 @@ end
 short_circuit_exit(intf::Interface)::Bool = norm(intf.prob.∇U(intf.prob.mₚ) - intf.prob.h) ≤ intf.prob.χ
 
 function checkconvergence!(cache::AbstractCache, intf::Interface)
-	cache.err = norm(cache.xk - cache.xold)
+	cache.err = norm(cache.dfk)
     
 	return cache.err ≤ intf.tol
 
@@ -53,7 +54,6 @@ function boundary_residium(xk::AbstractArray{T}, intf::Interface)::T where {T <:
 	grad = -intf.prob.∇obj(xk)
 	n = xk - intf.prob.h
 	if dot(grad, n) ≤ 0
-		@info "Normal vector pointing inside interior"
 		return norm(grad)
 	end
 	norm(grad - ((grad ⋅ n) / (n ⋅ n)) * n)

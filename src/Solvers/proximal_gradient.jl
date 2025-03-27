@@ -1,8 +1,24 @@
-
 proxOfNorm(x, λ, mp) = ((1 - λ / max(norm(x - mp), λ)) * (x - mp)) + mp
+
 function proxOfNorm!(res, x, λ, mp)
-	res .= ((1 - λ / max(norm(x - mp), λ)) * (x - mp)) + mp
-	nothing
+    norm_sq = 0.0
+    @inbounds for i in eachindex(x, mp)
+        norm_sq += (x[i] - mp[i])^2
+    end
+    norm_val = sqrt(norm_sq)
+    
+    # Compute the scaling factor
+    scale = if norm_val > λ
+        1 - λ / norm_val
+    else
+        0.0
+    end
+    
+    # Update res in-place without temporary arrays
+    @inbounds for i in eachindex(res, x, mp)
+        res[i] = scale * (x[i] - mp[i]) + mp[i]
+    end
+    nothing
 end
 
 T(Lk, xk, dfk, χ, mₚ) = proxOfNorm((xk .- 1 / Lk * dfk), 1 / Lk * χ, mₚ)
@@ -17,8 +33,8 @@ function proximal_gradient(intf::Interface{UnconstrainedProblem}; callback)
 	η = 1.001
 	Lk = s
 
-	f(xk, intf) = intf.prob.U(xk) - xk ⋅ intf.prob.h
-	∇f(xk, intf) = intf.prob.∇U(xk) - intf.prob.h
+	f(xk, intf) = intf.prob.U(xk) .- xk ⋅ intf.prob.h
+	∇f(xk, intf) = intf.prob.∇U(xk) .- intf.prob.h
 
 	cache = ProxGradCache(
 		zeros(length(intf.x0)),

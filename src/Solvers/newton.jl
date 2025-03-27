@@ -43,7 +43,6 @@ function newton(intf::Interface; linesearch, callback::Union{Nothing, Function} 
 		return Solution(cache.xk, cache.fk, false, cache.iter, cache.err)
 	else
 		x0 = intf.prob.h + (intf.prob.χ / norm(cache.xk - intf.prob.h) * (cache.xk - intf.prob.h))
-		@info norm(x0 - intf.prob.h) 
 		if length(cache.xk) == 2
 			return newton_on_ball(intf, linesearch, x0, transform_to_euklidean_2D, transform_to_radial_2D, cache.iter, callback = callback)
 		elseif length(cache.xk) == 3
@@ -119,7 +118,6 @@ function newton!(
 	callback::Union{Nothing, Function} = nothing,
 	error_function = (cache, intf) -> maximum(abs.(cache.dfk)),
 	)
-	@info cache.iter
 	used_iter = copy(cache.iter)
 	for cache.iter ∈ used_iter:max_iter
 		newton_step!(cache, guaranteedconvex)

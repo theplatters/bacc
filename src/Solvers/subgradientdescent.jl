@@ -20,6 +20,7 @@ function subgradientdescent(intf::Interface{UnconstrainedProblem}; linesearch, c
 		cache.s = -cache.dfk
 		
 		α, cache.fk = linesearch(ϕ, dϕ, ϕdϕ, 1.0, cache.fk, dot(cache.dfk, cache.s))
+		@info α
 		cache.xold .= cache.xk
 		cache.xk += α * cache.s
 		

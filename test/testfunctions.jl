@@ -12,7 +12,7 @@ function test_fun_1_builder(mₛ, a)
 end
 
 function test_fun_1_conjugate_builder(mₛ, a)
-	return x -> norm(x) < mₛ ? a * mₛ * log(cosh(norm(x) / a)) : Inf
+	return x -> norm(x) < mₛ ? a * mₛ * log(sech(norm(x) / a)) : Inf
 end
 
 function test_fun_2_builder(mₛ, A)

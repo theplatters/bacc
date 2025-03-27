@@ -2,7 +2,10 @@ using BenchmarkTools
 using Bachelorarbeit
 using LineSearches
 using GLMakie
+using Profile
+using PProf
 include("testfunctions.jl")
+
 
 
 mp = zeros(3)
@@ -10,7 +13,7 @@ h = 600 * ones(3)
 χ = 71
 cp = ConstrainedProblem(χ, h, mp, test_fun_2_builder(10e6, 38))
 ci = Interface(cp, h + [0.1,0.1, 0.1], 100, 1e-6)
-up = UnconstrainedProblem(χ, h, mp, test_fun_2_conjugate_builder(100, 30))
+up = UnconstrainedProblem(χ, h, mp, test_fun_2_builder(10e6, 38))
 ui = Interface(up, mp , 1000, 1e-6)
 sol = solve(ui, :proximal_gradient)
 sol = solve(ui, :semi_smooth_newton)
@@ -22,6 +25,14 @@ sol = solve(ci, :newton)
 @benchmark solve($ui, :semi_smooth_newton, linesearch = BackTracking())
 @benchmark solve($ui, :subgradientdescent, linesearch = BackTracking())
 @benchmark solve($ui, :proximal_gradient)
+
+@Profile.Allocs.profile solve(ci, :newton, linesearch = BackTracking())
+@profile solve(ci, :semi_smooth_newton, linesearch = BackTracking())
+@profile solve(ui, :semi_smooth_newton, linesearch = BackTracking())
+@profile solve(ui, :subgradientdescent, linesearch = BackTracking())
+@Profile.Allocs.profile sample_rate=1 solve(ui, :proximal_gradient)
+VSCodeServer.@profview solve(ui, :semi_smooth_newton)
+VSCodeServer.@profview solve(ui, :subgradientdescent)
 
 cp = ConstrainedProblem(χ, h, mp, test_fun_1_builder(100, 60))
 up = UnconstrainedProblem(χ, h, mp, test_fun_1_conjugate_builder(100, 60))
